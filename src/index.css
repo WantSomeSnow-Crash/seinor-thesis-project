@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+/* ── Apple-style glass buttons ─────────────────────────────────────────────── */
+.glass-btn {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.50),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 4px 18px rgba(0, 0, 0, 0.40);
+  border-radius: 999px;
+  padding: 0.75rem 1.75rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  cursor: pointer;
+}
+
+.glass-btn:hover {
+  background: rgba(255, 255, 255, 0.20);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.60),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.10),
+    0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.glass-btn:active {
+  transform: scale(0.97);
+}
+
+.glass-panel {
+  padding: 0.75rem 1.5rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(156, 27, 27, 0.28);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.50),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 4px 18px rgba(0, 0, 0, 0.40);
+}
+
+.glass-btn-active {
+  background: rgba(16, 185, 129, 0.28);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.10),
+    0 0 16px rgba(16, 185, 129, 0.30),
+    0 4px 18px rgba(0, 0, 0, 0.35);
+  color: #6ee7b7;
+}
