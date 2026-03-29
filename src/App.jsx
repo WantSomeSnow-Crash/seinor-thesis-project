@@ -4,6 +4,7 @@ import ChordSelector from './components/ChordSelector'
 import StatusBar from './components/StatusBar'
 import TrackingCanvas from './components/TrackingCanvas'
 import GuitarScene from './components/GuitarScene'
+import LandingPage from './components/LandingPage'
 import useMediaPipe from './hooks/useMediaPipe'
 import useAudio from './hooks/useAudio'
 import useStrum from './hooks/useStrum'
@@ -11,6 +12,7 @@ import { CHORDS } from './data/chords'
 import './index.css'
 
 export default function App() {
+  const [showApp, setShowApp]             = useState(false)
   const [selectedChord, setSelectedChord] = useState('Em')
   const [cameraReady, setCameraReady]     = useState(false)
   const [leftHanded, setLeftHanded]       = useState(false)
@@ -55,6 +57,10 @@ export default function App() {
     initAudio()
     setSelectedChord(chord)
   }, [initAudio])
+
+  if (!showApp) {
+    return <LandingPage onEnter={() => setShowApp(true)} />
+  }
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden font-sans">
