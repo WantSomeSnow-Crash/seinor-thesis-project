@@ -31,25 +31,27 @@ export default function App() {
   }, [])
 
   const { poseResults, handResults, trackingReady } = useMediaPipe(videoRef)
-  const { playChord, initAudio }                    = useAudio()
+  const { playString, initAudio }                   = useAudio()
 
-  // Strum handler — plays the chord and triggers string flash
-  const handleStrum = useCallback(() => {
-    playChord(CHORDS[selectedChord]?.notes)
+  // Per-string strum handler — looks up the note for this string in the current chord
+  const handleStringStrum = useCallback((stringIndex) => {
+    const note = CHORDS[selectedChord]?.stringNotes?.[stringIndex]
+    initAudio()
+    if (note) playString(stringIndex, note)
     setStrumPulse(n => n + 1)
 
     // Brief UI flash
     setStrumFlash(true)
     setTimeout(() => setStrumFlash(false), 250)
-  }, [playChord, selectedChord])
+  }, [playString, initAudio, selectedChord])
 
-  // Detect strum via hand entering guitar body zone
+  // Detect per-string strums via hand sweeping across guitar strings
   useStrum({
     handResults,
     guitarStateRef,
-    size     : sizeRef.current,
+    size          : sizeRef.current,
     leftHanded,
-    onStrum  : handleStrum,
+    onStringStrum : handleStringStrum,
   })
 
   // Prime audio context on first chord button tap (browser requires a user gesture)

@@ -29,7 +29,7 @@ export default function LandingPage({ onEnter }) {
           </p>
         </div>
 
-        {/* Feature highlights */}
+        {/* Feature highlights
         <div className="flex flex-col gap-3 w-full">
           {[
             { icon: '📷', label: 'Real-time pose & hand tracking' },
@@ -41,7 +41,7 @@ export default function LandingPage({ onEnter }) {
               <span className="text-slate-200 text-sm font-medium">{label}</span>
             </div>
           ))}
-        </div>
+        </div> */}
 
         {/* CTA */}
         <button

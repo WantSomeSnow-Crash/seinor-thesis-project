@@ -18,7 +18,7 @@ export default function FretboardDots({ selectedChord }) {
         if (y == null) return null
 
         return (
-          <group key={i} position={[x, y, 0.05]}>
+          <group key={i} position={[x, y, -0.05]}>
             {/* Outer glow */}
             <mesh>
               <circleGeometry args={[0.035, 20]} />
@@ -29,6 +29,7 @@ export default function FretboardDots({ selectedChord }) {
                 transparent
                 opacity={0.35}
                 depthWrite={false}
+                depthTest={false}
               />
             </mesh>
             {/* Solid core dot */}
@@ -38,6 +39,7 @@ export default function FretboardDots({ selectedChord }) {
                 color="#6ee7b7"
                 emissive="#34d399"
                 emissiveIntensity={3.0}
+                depthTest={false}
               />
             </mesh>
           </group>

@@ -47,5 +47,14 @@ export default function useAudio() {
     })
   }, [initAudio])
 
-  return { playChord, initAudio }
+  const playString = useCallback(async (stringIndex, note) => {
+    if (!note) return
+    await initAudio()
+    if (!synthsRef.current) return
+    try {
+      synthsRef.current[stringIndex % 6]?.triggerAttack(note, Tone.now())
+    } catch (_) { /* ignore note errors */ }
+  }, [initAudio])
+
+  return { playChord, playString, initAudio }
 }

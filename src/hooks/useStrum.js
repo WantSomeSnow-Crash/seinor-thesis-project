@@ -1,73 +1,100 @@
 import { useEffect, useRef } from 'react'
 
+// These must match GuitarPlaceholder.jsx constants
+const MODEL_NORM_SCALE = 0.3
+const NUM_STRINGS      = 6
+const STRING_SPACING   = 0.032
+const FIRST_STRING_X   = (0 - 2.5) * STRING_SPACING   // = -0.08
+
+// Strum zone in guitar local space (body / soundhole area — not the fretboard)
+const STRUM_Y_MIN = -0.55
+const STRUM_Y_MAX =  0.05
+
+// Minimum ms before the same string can fire again
+const STRING_COOLDOWN = 80
+
 /**
- * Detects when the strumming hand enters the guitar body zone.
- * Fires onStrum() once per crossing (with a cooldown).
+ * Detects when the strumming hand sweeps across individual strings.
+ * Fires onStringStrum(stringIndex) for each string crossed.
  *
- * guitarStateRef: { x, y, scale } in orthographic world-space pixels
- * size:           { width, height } from useThree — matches world-space units
+ * guitarStateRef: { x, y, scale, rotation } in orthographic world-space pixels
+ * size:           { width, height } matching world-space units
  * leftHanded:     if true, strumming hand is the player's left hand
  */
-export default function useStrum({ handResults, guitarStateRef, size, leftHanded, onStrum }) {
-  const wasInZoneRef  = useRef(false)
-  const lastStrumRef  = useRef(0)
-  const onStrumRef    = useRef(onStrum)
-  const leftHandedRef = useRef(leftHanded)
+export default function useStrum({ handResults, guitarStateRef, size, leftHanded, onStringStrum }) {
+  const prevZoneRef      = useRef(null)
+  const lastStrumRef     = useRef(Array(NUM_STRINGS).fill(0))
+  const onStrumRef       = useRef(onStringStrum)
+  const leftHandedRef    = useRef(leftHanded)
 
-  // Keep refs fresh without re-subscribing the effect
-  useEffect(() => { onStrumRef.current    = onStrum   }, [onStrum])
-  useEffect(() => { leftHandedRef.current = leftHanded }, [leftHanded])
+  useEffect(() => { onStrumRef.current    = onStringStrum }, [onStringStrum])
+  useEffect(() => { leftHandedRef.current = leftHanded    }, [leftHanded])
 
   useEffect(() => {
     if (!handResults?.landmarks?.length) {
-      wasInZoneRef.current = false
+      prevZoneRef.current = null
       return
     }
 
-    // MediaPipe labels hands from the player's perspective (after mirroring).
-    // Right-handed player strums with their RIGHT hand (label "Right").
-    // Left-handed player strums with their LEFT hand (label "Left").
     const strumLabel = leftHandedRef.current ? 'Left' : 'Right'
-
-    const strumIdx = handResults.handedness?.findIndex(
+    const strumIdx   = handResults.handedness?.findIndex(
       h => h[0]?.categoryName === strumLabel
     ) ?? -1
 
     if (strumIdx === -1) {
-      wasInZoneRef.current = false
+      prevZoneRef.current = null
       return
     }
 
-    const hand  = handResults.landmarks[strumIdx]
-    const wrist = hand?.[0]           // landmark 0 = wrist
-    const indexTip = hand?.[8]        // landmark 8 = index fingertip
+    const hand     = handResults.landmarks[strumIdx]
+    const wrist    = hand?.[0]
+    const indexTip = hand?.[8]
     if (!wrist) return
 
-    // Use whichever point is detected; prefer index tip for precision
     const pt = indexTip ?? wrist
-
-    // World space (mirrored x, same convention as the guitar anchor)
     const wx = (0.5 - pt.x) * size.width
     const wy = (0.5 - pt.y) * size.height
 
-    const { x: gx, y: gy, scale } = guitarStateRef.current ?? {}
-    if (!scale) return
+    const { x: gx, y: gy, scale, rotation } = guitarStateRef.current ?? {}
+    if (!scale || rotation == null) return
 
-    const dx   = wx - gx
-    const dy   = wy - gy
-    const dist = Math.sqrt(dx * dx + dy * dy)
+    // Total scale from model-local units → screen pixels
+    const effectiveScale = scale * MODEL_NORM_SCALE
+    const cos = Math.cos(rotation)
+    const sin = Math.sin(rotation)
 
-    // Strum zone ≈ guitar body radius (lower bout r=0.5 in model units, scaled up)
-    const strumRadius = scale * 0.58
+    // Project hand position into guitar local space
+    const dx     =  wx - gx
+    const dy     =  wy - gy
+    const localX = ( dx * cos + dy * sin) / effectiveScale
+    const localY = (-dx * sin + dy * cos) / effectiveScale
 
-    const inZone = dist < strumRadius
-    const now    = Date.now()
-
-    if (inZone && !wasInZoneRef.current && now - lastStrumRef.current > 380) {
-      onStrumRef.current?.()
-      lastStrumRef.current = now
+    // Only detect strums in the body / soundhole zone, not on the neck
+    if (localY < STRUM_Y_MIN || localY > STRUM_Y_MAX) {
+      prevZoneRef.current = null
+      return
     }
 
-    wasInZoneRef.current = inZone
+    // Map localX to the nearest string index (0 = low E, 5 = high e)
+    const rawZone    = Math.round((localX - FIRST_STRING_X) / STRING_SPACING)
+    const stringZone = Math.max(0, Math.min(NUM_STRINGS - 1, rawZone))
+
+    const prevZone = prevZoneRef.current
+    prevZoneRef.current = stringZone
+
+    // No previous position or still on same string — nothing to fire yet
+    if (prevZone === null || prevZone === stringZone) return
+
+    // Hand swept across one or more strings — fire each one in sweep order
+    const now = Date.now()
+    const lo  = Math.min(prevZone, stringZone)
+    const hi  = Math.max(prevZone, stringZone)
+
+    for (let i = lo; i <= hi; i++) {
+      if (now - lastStrumRef.current[i] > STRING_COOLDOWN) {
+        onStrumRef.current?.(i)
+        lastStrumRef.current[i] = now
+      }
+    }
   }, [handResults, guitarStateRef, size])
 }

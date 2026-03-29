@@ -13,6 +13,8 @@ export const CHORDS = {
       { string: 5, fret: 0 },
     ],
     notes: ['E2', 'B2', 'E3', 'G3', 'B3', 'E4'],
+    // Per-string notes indexed 0-5; null = muted string
+    stringNotes: ['E2', 'B2', 'E3', 'G3', 'B3', 'E4'],
   },
   G: {
     label: 'G Major',
@@ -25,6 +27,7 @@ export const CHORDS = {
       { string: 5, fret: 3 },
     ],
     notes: ['G2', 'B2', 'D3', 'G3', 'B3', 'G4'],
+    stringNotes: ['G2', 'B2', 'D3', 'G3', 'D4', 'G4'],
   },
   C: {
     label: 'C Major',
@@ -36,6 +39,7 @@ export const CHORDS = {
       { string: 5, fret: 0 },
     ],
     notes: ['C3', 'E3', 'G3', 'C4', 'E4'],
+    stringNotes: [null, 'C3', 'E3', 'G3', 'C4', 'E4'],
   },
   D: {
     label: 'D Major',
@@ -46,6 +50,7 @@ export const CHORDS = {
       { string: 5, fret: 2 },
     ],
     notes: ['D3', 'A3', 'D4', 'F#4'],
+    stringNotes: [null, null, 'D3', 'A3', 'D4', 'F#4'],
   },
   Am: {
     label: 'A minor',
@@ -58,6 +63,7 @@ export const CHORDS = {
       { string: 5, fret: 0 },
     ],
     notes: ['E2', 'A2', 'E3', 'A3', 'C4', 'E4'],
+    stringNotes: ['E2', 'A2', 'E3', 'A3', 'C4', 'E4'],
   },
 }
 
@@ -65,13 +71,13 @@ export const CHORDS = {
 // If dots appear too high/low on the neck, adjust FRET_Y.
 // If they're shifted left/right off the strings, adjust STRING_CENTER_X.
 export const FRET_Y = {
-  1: 0.74,
-  2: 0.62,
-  3: 0.50,
+  1: 2.1,
+  2: 1.8,
+  3: 1.5,
 }
 
 // X positions for each string on the fretboard.
-const STRING_CENTER_X = 0.0
+const STRING_CENTER_X = 0.01
 const STRING_SPACING  = 0.032
 export const STRING_X = Array.from({ length: 6 }, (_, i) =>
   STRING_CENTER_X + (i - 2.5) * STRING_SPACING

@@ -10,17 +10,18 @@ import FretboardDots from './FretboardDots'
 //   MODEL_NORM_SCALE – increase to make the model bigger inside the anchor group
 //   MODEL_X/Y_OFFSET – nudge the model body onto the anchor point
 
-const MODEL_ROTATION   = [Math.PI / 5, 3, 0]   // rotate face toward camera (model stored edge-on)
-const MODEL_NORM_SCALE = 0.449        // fine-tune visual size (separate from GUITAR_VS_TORSO)
+const MODEL_ROTATION   = [0, 40, 0]   // adjust once you see how the model loads
+const MODEL_NORM_SCALE = 2.0
 const MODEL_X_OFFSET   = 0.0
 const MODEL_Y_OFFSET   = 0.0
 
 // ── Anchor / positioning constants ───────────────────────────────────────────
-const GUITAR_TILT      = 1.1    // neck hold angle from vertical (≈ 63°)
-const ANCHOR_HIP_BLEND = 0.80   // how much the anchor favours the strumming-side hip
-const ANCHOR_UP_RATIO  = 0.02   // how far up the torso the anchor sits
-const GUITAR_VS_TORSO  = 2.5    // guitar height as a fraction of torso length (2× previous)
-const MODEL_SPAN       = 2.85   // effective height of the normalised model (units)
+const GUITAR_TILT      = 1
+const ANCHOR_HIP_BLEND = 0.80
+const ANCHOR_UP_RATIO  = -0.10
+const ANCHOR_X_OFFSET  = .60
+const GUITAR_VS_TORSO  = 2.5
+const MODEL_SPAN       = 2.85
 
 // Reusable vectors
 const _anchor      = new THREE.Vector3()
@@ -30,7 +31,7 @@ const _torso       = new THREE.Vector3()
 const _targetScale = new THREE.Vector3()
 
 // Preload so the model is ready before the user steps in frame
-useGLTF.preload('/models/guitar.glb')
+useGLTF.preload('/models/electric_guitar.glb')
 
 export default function GuitarPlaceholder({
   poseResults,
@@ -42,7 +43,7 @@ export default function GuitarPlaceholder({
   const groupRef = useRef()
   const { size } = useThree()
 
-  const { scene } = useGLTF('/models/guitar.glb')
+  const { scene } = useGLTF('/models/electric_guitar.glb')
 
   // Clone the scene once so this instance owns its own graph
   const modelScene = useRef(null)
@@ -108,6 +109,7 @@ export default function GuitarPlaceholder({
       0
     )
     _anchor.addScaledVector(_torso.clone().normalize(), torsoLen * ANCHOR_UP_RATIO)
+    _anchor.x += torsoLen * (isLeft ? -ANCHOR_X_OFFSET : ANCHOR_X_OFFSET)
 
     const torsoTilt   = Math.atan2(_torso.x, _torso.y)
     const guitarAngle = isLeft ? -GUITAR_TILT : GUITAR_TILT
@@ -120,10 +122,15 @@ export default function GuitarPlaceholder({
     group.scale.lerp(_targetScale, 0.18)
 
     if (guitarStateRef) {
-      guitarStateRef.current = { x: group.position.x, y: group.position.y, scale: group.scale.x }
+      guitarStateRef.current = {
+        x        : group.position.x,
+        y        : group.position.y,
+        scale    : group.scale.x,
+        rotation : group.rotation.z,
+      }
     }
 
-    // Strum flash: traverse all meshes and pulse their emissive intensity
+    // Strum flash
     if (pulseRef.current > 0) {
       pulseRef.current = Math.max(0, pulseRef.current - delta * 4)
       const extra = pulseRef.current * 1.5
@@ -137,17 +144,19 @@ export default function GuitarPlaceholder({
 
   return (
     <group ref={groupRef} visible={false}>
-      {/* Inner group: model-specific calibration transform */}
+      {/* Guitar model with its calibration rotation */}
       <group
         rotation={MODEL_ROTATION}
         scale={[MODEL_NORM_SCALE, MODEL_NORM_SCALE, MODEL_NORM_SCALE]}
         position={[MODEL_X_OFFSET, MODEL_Y_OFFSET, 0]}
       >
         <primitive object={modelScene.current} />
-
-        {/* Fretboard dots — positioned in model local space */}
-        <FretboardDots selectedChord={selectedChord} />
       </group>
+
+      {/* Fretboard dots — in outer group (screen-aligned) space,
+          unaffected by MODEL_ROTATION. Calibrate FRET_Y / STRING_X
+          in chords.js to line them up with the visible fretboard. */}
+      <FretboardDots selectedChord={selectedChord} />
     </group>
   )
 }
