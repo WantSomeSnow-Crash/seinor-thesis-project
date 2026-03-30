@@ -65,3 +65,32 @@ html, body, #root {
     0 4px 18px rgba(0, 0, 0, 0.35);
   color: #6ee7b7;
 }
+
+/* ── Dark mode overrides ────────────────────────────────────────────────────── */
+.dark-mode .glass-btn {
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.40),
+    0 4px 18px rgba(0, 0, 0, 0.70);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dark-mode .glass-btn:hover {
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.dark-mode .glass-panel {
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.40),
+    0 4px 18px rgba(0, 0, 0, 0.70);
+}
+
+.dark-mode .glass-btn-active {
+  background: rgba(16, 185, 129, 0.40);
+  border: 1px solid rgba(52, 211, 153, 0.70);
+}

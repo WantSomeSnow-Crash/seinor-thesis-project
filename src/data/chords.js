@@ -67,18 +67,30 @@ export const CHORDS = {
   },
 }
 
-// ── Fretboard dot positions — in GLB model local space ───────────────────────
-// If dots appear too high/low on the neck, adjust FRET_Y.
-// If they're shifted left/right off the strings, adjust STRING_CENTER_X.
+// ── Fretboard dot positions — in guitar outer-group local space ───────────────
+// FRET_Y  — move a row of dots up/down along the neck.
+//   Higher value = closer to headstock (up the neck).
 export const FRET_Y = {
-  1: 2.1,
-  2: 1.8,
-  3: 1.5,
+  1: 1.85,
+  2: 1.80,
+  3: 1.75,
 }
 
-// X positions for each string on the fretboard.
-const STRING_CENTER_X = 0.01
-const STRING_SPACING  = 0.032
-export const STRING_X = Array.from({ length: 6 }, (_, i) =>
-  STRING_CENTER_X + (i - 2.5) * STRING_SPACING
-)
+// DOT_SCREEN_OFFSET — moves ALL dots in pure screen pixels.
+//   DOT_SCREEN_OFFSET_X: positive = right, negative = left
+//   DOT_SCREEN_OFFSET_Y: positive = up,    negative = down
+export const DOT_SCREEN_OFFSET_X = -10
+export const DOT_SCREEN_OFFSET_Y = -30
+
+const STRING_OFFSET_X = 0.0
+// STRING_X — one entry per string (0 = low E … 5 = high e).
+// Tune each value to adjust individual string spacing.
+// These are relative to STRING_OFFSET_X, so you rarely need to change them.
+export const STRING_X = [
+  STRING_OFFSET_X + (-0.07),   // string 0: low E
+  STRING_OFFSET_X + (-0.038),  // string 1: A
+  STRING_OFFSET_X + (-0.006),  // string 2: D
+  STRING_OFFSET_X + ( 0.026),  // string 3: G
+  STRING_OFFSET_X + ( 0.058),  // string 4: B
+  STRING_OFFSET_X + ( 0.090),  // string 5: high e
+]

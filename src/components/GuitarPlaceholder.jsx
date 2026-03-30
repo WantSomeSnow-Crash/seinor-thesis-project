@@ -3,6 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import FretboardDots from './FretboardDots'
+import StrumZoneDebug from './StrumZoneDebug'
+import { DOT_SCREEN_OFFSET_X, DOT_SCREEN_OFFSET_Y } from '../data/chords'
 
 // ── Model calibration ─────────────────────────────────────────────────────────
 // Tweak these if the guitar still looks off after changes:
@@ -39,8 +41,10 @@ export default function GuitarPlaceholder({
   selectedChord  = 'Em',
   guitarStateRef,
   strumPulse     = 0,
+  showStrumZone  = false,
 }) {
-  const groupRef = useRef()
+  const groupRef    = useRef()
+  const dotsGroupRef = useRef()
   const { size } = useThree()
 
   const { scene } = useGLTF('/models/electric_guitar.glb')
@@ -130,6 +134,14 @@ export default function GuitarPlaceholder({
       }
     }
 
+    // Convert screen-pixel dot offset → guitar local space
+    if (dotsGroupRef.current) {
+      const rot = group.rotation.z
+      const s   = group.scale.x
+      dotsGroupRef.current.position.x = ( DOT_SCREEN_OFFSET_X * Math.cos(rot) + DOT_SCREEN_OFFSET_Y * Math.sin(rot)) / s
+      dotsGroupRef.current.position.y = (-DOT_SCREEN_OFFSET_X * Math.sin(rot) + DOT_SCREEN_OFFSET_Y * Math.cos(rot)) / s
+    }
+
     // Strum flash
     if (pulseRef.current > 0) {
       pulseRef.current = Math.max(0, pulseRef.current - delta * 4)
@@ -143,20 +155,26 @@ export default function GuitarPlaceholder({
   })
 
   return (
-    <group ref={groupRef} visible={false}>
-      {/* Guitar model with its calibration rotation */}
-      <group
-        rotation={MODEL_ROTATION}
-        scale={[MODEL_NORM_SCALE, MODEL_NORM_SCALE, MODEL_NORM_SCALE]}
-        position={[MODEL_X_OFFSET, MODEL_Y_OFFSET, 0]}
-      >
-        <primitive object={modelScene.current} />
+    <>
+      <group ref={groupRef} visible={false}>
+        {/* Guitar model with its calibration rotation */}
+        <group
+          rotation={MODEL_ROTATION}
+          scale={[MODEL_NORM_SCALE, MODEL_NORM_SCALE, MODEL_NORM_SCALE]}
+          position={[MODEL_X_OFFSET, MODEL_Y_OFFSET, 0]}
+        >
+          <primitive object={modelScene.current} />
+        </group>
+
+        {/* Fretboard dots — position shifted by DOT_SCREEN_OFFSET_X/Y in chords.js */}
+        <group ref={dotsGroupRef}>
+          <FretboardDots selectedChord={selectedChord} />
+        </group>
       </group>
 
-      {/* Fretboard dots — in outer group (screen-aligned) space,
-          unaffected by MODEL_ROTATION. Calibrate FRET_Y / STRING_X
-          in chords.js to line them up with the visible fretboard. */}
-      <FretboardDots selectedChord={selectedChord} />
-    </group>
+      {/* StrumZoneDebug lives outside the guitar group so it uses screen-space
+          coordinates — STRUM_X_CENTER moves it left/right, not diagonally. */}
+      {showStrumZone && <StrumZoneDebug guitarStateRef={guitarStateRef} />}
+    </>
   )
 }

@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import GuitarPlaceholder from './GuitarPlaceholder'
 
-export default function GuitarScene({ poseResults, leftHanded, selectedChord, guitarStateRef, strumPulse }) {
+export default function GuitarScene({ poseResults, leftHanded, selectedChord, guitarStateRef, strumPulse, showStrumZone }) {
   return (
     <Canvas
       className="absolute inset-0 w-full h-full pointer-events-none"
@@ -19,6 +19,7 @@ export default function GuitarScene({ poseResults, leftHanded, selectedChord, gu
         selectedChord={selectedChord}
         guitarStateRef={guitarStateRef}
         strumPulse={strumPulse}
+        showStrumZone={showStrumZone}
       />
     </Canvas>
   )

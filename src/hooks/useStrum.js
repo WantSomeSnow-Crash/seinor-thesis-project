@@ -1,17 +1,15 @@
 import { useEffect, useRef } from 'react'
-
-// These must match GuitarPlaceholder.jsx constants
-const MODEL_NORM_SCALE = 0.3
-const NUM_STRINGS      = 6
-const STRING_SPACING   = 0.032
-const FIRST_STRING_X   = (0 - 2.5) * STRING_SPACING   // = -0.08
-
-// Strum zone in guitar local space (body / soundhole area — not the fretboard)
-const STRUM_Y_MIN = -0.55
-const STRUM_Y_MAX =  0.05
-
-// Minimum ms before the same string can fire again
-const STRING_COOLDOWN = 80
+import {
+  MODEL_NORM_SCALE,
+  NUM_STRINGS,
+  FIRST_STRING_X,
+  STRING_SPACING,
+  STRUM_OFFSET_X,
+  STRUM_OFFSET_Y,
+  STRUM_Y_MIN,
+  STRUM_Y_MAX,
+  STRING_COOLDOWN,
+} from '../data/strumZone'
 
 /**
  * Detects when the strumming hand sweeps across individual strings.
@@ -63,9 +61,9 @@ export default function useStrum({ handResults, guitarStateRef, size, leftHanded
     const cos = Math.cos(rotation)
     const sin = Math.sin(rotation)
 
-    // Project hand position into guitar local space
-    const dx     =  wx - gx
-    const dy     =  wy - gy
+    // Project hand position into guitar local space (apply screen-pixel offsets)
+    const dx     =  wx - (gx + STRUM_OFFSET_X)
+    const dy     =  wy - (gy + STRUM_OFFSET_Y)
     const localX = ( dx * cos + dy * sin) / effectiveScale
     const localY = (-dx * sin + dy * cos) / effectiveScale
 

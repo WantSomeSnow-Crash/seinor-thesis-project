@@ -18,7 +18,7 @@ const HIP_INDICES    = new Set([23, 24])
 const SHOULDER_IDX   = new Set([11, 12])
 const FINGERTIP_IDX  = new Set([4, 8, 12, 16, 20])
 
-export default function TrackingCanvas({ poseResults, handResults }) {
+export default function TrackingCanvas({ poseResults, handResults, visible = true }) {
   const canvasRef = useRef(null)
 
   useEffect(() => {
@@ -135,6 +135,7 @@ export default function TrackingCanvas({ poseResults, handResults }) {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full z-10 pointer-events-none"
+      style={{ opacity: visible ? 1 : 0 }}
     />
   )
 }

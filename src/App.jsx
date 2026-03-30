@@ -18,6 +18,9 @@ export default function App() {
   const [leftHanded, setLeftHanded]       = useState(false)
   const [strumPulse, setStrumPulse]       = useState(0)  // incremented on each strum
   const [strumFlash, setStrumFlash]       = useState(false)
+  const [showStrumZone, setShowStrumZone]   = useState(false)
+  const [showTracking, setShowTracking]     = useState(true)
+  const [darkMode, setDarkMode]             = useState(false)
 
   const videoRef      = useRef(null)
   const guitarStateRef = useRef({ x: 0, y: 0, scale: 100 })
@@ -65,13 +68,13 @@ export default function App() {
   }
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden font-sans">
+    <div className={`relative w-full h-full bg-black overflow-hidden font-sans${darkMode ? ' dark-mode' : ''}`}>
 
       {/* Layer 1 — camera */}
       <CameraFeed onStreamReady={handleStreamReady} />
 
       {/* Layer 2 — skeleton canvas */}
-      <TrackingCanvas poseResults={poseResults} handResults={handResults} />
+      <TrackingCanvas poseResults={poseResults} handResults={handResults} visible={showTracking} />
 
       {/* Layer 3 — 3D guitar */}
       <GuitarScene
@@ -80,6 +83,7 @@ export default function App() {
         selectedChord={selectedChord}
         guitarStateRef={guitarStateRef}
         strumPulse={strumPulse}
+        showStrumZone={showStrumZone}
       />
 
       {/* Layer 4 — vignette */}
@@ -139,6 +143,25 @@ export default function App() {
           </div>
         </div>
 
+        {/* Strum zone debug toggle */}
+        <div className="glass-panel rounded-2xl">
+          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Debug</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => setShowTracking(v => !v)}
+              className={`glass-btn w-full text-sm ${!showTracking ? 'glass-btn-active' : ''}`}
+            >
+              {showTracking ? 'Hide tracking' : 'Show tracking'}
+            </button>
+            <button
+              onClick={() => setShowStrumZone(v => !v)}
+              className={`glass-btn w-full text-sm ${showStrumZone ? 'glass-btn-active' : ''}`}
+            >
+              {showStrumZone ? 'Hide strum zone' : 'Show strum zone'}
+            </button>
+          </div>
+        </div>
+
         {/* Strum indicator */}
         <div className="glass-panel rounded-2xl">
           <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Strum</p>
@@ -162,6 +185,16 @@ export default function App() {
             <li><span className="text-purple-400 font-bold">●</span> Fretting hand</li>
           </ul>
         </div>
+      </div>
+
+      {/* Dark mode toggle — bottom left */}
+      <div className="absolute bottom-6 left-6 z-20">
+        <button
+          onClick={() => setDarkMode(v => !v)}
+          className={`glass-btn text-sm ${darkMode ? 'glass-btn-active' : ''}`}
+        >
+          {darkMode ? '☀ Light mode' : '🌙 Dark mode'}
+        </button>
       </div>
 
       {/* Status bar */}
