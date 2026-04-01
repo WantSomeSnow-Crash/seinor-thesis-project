@@ -8,6 +8,9 @@ import LandingPage from './components/LandingPage'
 import useMediaPipe from './hooks/useMediaPipe'
 import useAudio from './hooks/useAudio'
 import useStrum from './hooks/useStrum'
+import useDwellClick from './hooks/useDwellClick'
+import useChordRecognition from './hooks/useChordRecognition'
+import HandCursor from './components/HandCursor'
 import { CHORDS } from './data/chords'
 import './index.css'
 
@@ -21,6 +24,7 @@ export default function App() {
   const [showStrumZone, setShowStrumZone]   = useState(false)
   const [showTracking, setShowTracking]     = useState(true)
   const [darkMode, setDarkMode]             = useState(false)
+  const [autoChord, setAutoChord]           = useState(false)
 
   const videoRef      = useRef(null)
   const guitarStateRef = useRef({ x: 0, y: 0, scale: 100 })
@@ -35,6 +39,7 @@ export default function App() {
 
   const { poseResults, handResults, trackingReady } = useMediaPipe(videoRef)
   const { playString, initAudio }                   = useAudio()
+  const dwellCursor                                 = useDwellClick({ handResults })
 
   // Per-string strum handler — looks up the note for this string in the current chord
   const handleStringStrum = useCallback((stringIndex) => {
@@ -62,6 +67,13 @@ export default function App() {
     initAudio()
     setSelectedChord(chord)
   }, [initAudio])
+
+  useChordRecognition({
+    handResults,
+    leftHanded,
+    enabled: autoChord,
+    onChordDetected: handleChordChange,
+  })
 
   if (!showApp) {
     return <LandingPage onEnter={() => setShowApp(true)} />
@@ -123,6 +135,17 @@ export default function App() {
 
       {/* Right panel */}
       <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
+
+        {/* Chord recognition toggle */}
+        <div className="glass-panel rounded-2xl">
+          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Chord detection</p>
+          <button
+            onClick={() => setAutoChord(v => !v)}
+            className={`glass-btn w-full text-sm ${autoChord ? 'glass-btn-active' : ''}`}
+          >
+            {autoChord ? 'Auto-detect: On' : 'Auto-detect: Off'}
+          </button>
+        </div>
 
         {/* Handedness toggle */}
         <div className="glass-panel rounded-2xl">
@@ -199,6 +222,9 @@ export default function App() {
 
       {/* Status bar */}
       <StatusBar cameraReady={cameraReady} trackingReady={trackingReady} step={4} />
+
+      {/* Hand cursor with dwell-click ring */}
+      <HandCursor cursor={dwellCursor} />
     </div>
   )
 }
