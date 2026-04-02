@@ -5,32 +5,38 @@ import StatusBar from './components/StatusBar'
 import TrackingCanvas from './components/TrackingCanvas'
 import GuitarScene from './components/GuitarScene'
 import LandingPage from './components/LandingPage'
+import ModeSelect from './components/ModeSelect'
 import useMediaPipe from './hooks/useMediaPipe'
 import useAudio from './hooks/useAudio'
 import useStrum from './hooks/useStrum'
 import useDwellClick from './hooks/useDwellClick'
 import useChordRecognition from './hooks/useChordRecognition'
 import HandCursor from './components/HandCursor'
+import SettingsPanel from './components/SettingsPanel'
 import { CHORDS } from './data/chords'
 import './index.css'
 
 export default function App() {
-  const [showApp, setShowApp]             = useState(false)
+  const [showApp, setShowApp]           = useState(false)
+  const [mode, setMode]                 = useState(null)   // null | 'rock' | 'learn'
   const [selectedChord, setSelectedChord] = useState('Em')
-  const [cameraReady, setCameraReady]     = useState(false)
-  const [leftHanded, setLeftHanded]       = useState(false)
-  const [strumPulse, setStrumPulse]       = useState(0)  // incremented on each strum
-  const [strumFlash, setStrumFlash]       = useState(false)
-  const [showStrumZone, setShowStrumZone]   = useState(false)
-  const [showTracking, setShowTracking]     = useState(true)
-  const [darkMode, setDarkMode]             = useState(false)
-  const [autoChord, setAutoChord]           = useState(false)
+  const [cameraReady, setCameraReady]   = useState(false)
+  const [leftHanded, setLeftHanded]     = useState(false)
+  const [strumPulse, setStrumPulse]     = useState(0)
+  const [strumFlash, setStrumFlash]     = useState(false)
+  const [strumDirection, setStrumDirection] = useState(null)  // 'up' | 'down' | null
+  const [showStrumZone, setShowStrumZone] = useState(false)
+  const [showTracking, setShowTracking] = useState(true)
+  const [darkMode, setDarkMode]         = useState(false)
+  const [autoChordLearn, setAutoChordLearn] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
-  const videoRef      = useRef(null)
+  const videoRef       = useRef(null)
   const guitarStateRef = useRef({ x: 0, y: 0, scale: 100 })
+  const sizeRef        = useRef({ width: window.innerWidth, height: window.innerHeight })
 
-  // Viewport size for world-space coordinate mapping (matches R3F orthographic camera)
-  const sizeRef = useRef({ width: window.innerWidth, height: window.innerHeight })
+  // Rock mode always has auto-detect on; learn mode uses its own toggle
+  const autoChord = mode === 'rock' ? true : autoChordLearn
 
   const handleStreamReady = useCallback((videoEl) => {
     videoRef.current = videoEl
@@ -38,31 +44,41 @@ export default function App() {
   }, [])
 
   const { poseResults, handResults, trackingReady } = useMediaPipe(videoRef)
-  const { playString, initAudio }                   = useAudio()
+  const { playString, playStrum, initAudio }        = useAudio()
   const dwellCursor                                 = useDwellClick({ handResults })
 
-  // Per-string strum handler — looks up the note for this string in the current chord
+  // Learn mode — play individual string note
   const handleStringStrum = useCallback((stringIndex) => {
+    if (mode !== 'learn') return
     const note = CHORDS[selectedChord]?.stringNotes?.[stringIndex]
     initAudio()
     if (note) playString(stringIndex, note)
     setStrumPulse(n => n + 1)
-
-    // Brief UI flash
     setStrumFlash(true)
     setTimeout(() => setStrumFlash(false), 250)
-  }, [playString, initAudio, selectedChord])
+  }, [playString, initAudio, selectedChord, mode])
 
-  // Detect per-string strums via hand sweeping across guitar strings
+  // Rock mode — play full chord strum recording
+  const handleRockStrum = useCallback((direction) => {
+    if (mode !== 'rock') return
+    initAudio()
+    playStrum(selectedChord, direction)
+    setStrumPulse(n => n + 1)
+    setStrumFlash(true)
+    setStrumDirection(direction)
+    setTimeout(() => setStrumFlash(false), 250)
+    setTimeout(() => setStrumDirection(null), 400)
+  }, [playStrum, initAudio, selectedChord, mode])
+
   useStrum({
     handResults,
     guitarStateRef,
     size          : sizeRef.current,
     leftHanded,
-    onStringStrum : handleStringStrum,
+    onStringStrum : mode === 'learn' ? handleStringStrum : undefined,
+    onStrum       : mode === 'rock'  ? handleRockStrum   : undefined,
   })
 
-  // Prime audio context on first chord button tap (browser requires a user gesture)
   const handleChordChange = useCallback((chord) => {
     initAudio()
     setSelectedChord(chord)
@@ -75,9 +91,17 @@ export default function App() {
     onChordDetected: handleChordChange,
   })
 
+  // ── Screen routing ───────────────────────────────────────────────────────────
   if (!showApp) {
     return <LandingPage onEnter={() => setShowApp(true)} />
   }
+
+  if (!mode) {
+    return <ModeSelect onSelect={setMode} dwellCursor={dwellCursor} />
+  }
+
+  // ── Main app ─────────────────────────────────────────────────────────────────
+  const showDots = mode === 'learn'
 
   return (
     <div className={`relative w-full h-full bg-black overflow-hidden font-sans${darkMode ? ' dark-mode' : ''}`}>
@@ -96,6 +120,7 @@ export default function App() {
         guitarStateRef={guitarStateRef}
         strumPulse={strumPulse}
         showStrumZone={showStrumZone}
+        showDots={showDots}
       />
 
       {/* Layer 4 — vignette */}
@@ -103,8 +128,7 @@ export default function App() {
         className="absolute inset-0 pointer-events-none"
         style={{
           zIndex: 13,
-          background:
-            'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.50) 100%)',
+          background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.50) 100%)',
         }}
       />
 
@@ -116,15 +140,22 @@ export default function App() {
         />
       )}
 
-      {/* ── UI panels ────────────────────────────────────────────────────── */}
+      {/* ── UI panels ─────────────────────────────────────────────────────── */}
 
-      {/* App title */}
-      <div className="absolute top-6 left-6 z-20">
+      {/* App title + mode badge */}
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
         <div className="glass-panel rounded-2xl">
           <span className="text-slate-50 font-bold text-lg tracking-tight">
             🎸 Air Guitar
           </span>
         </div>
+        <button
+          onClick={() => setMode(null)}
+          className="glass-btn text-xs text-slate-400"
+          style={{ padding: '0.35rem 0.85rem' }}
+        >
+          {mode === 'rock' ? '🤘 Rock mode' : '🎓 Learn mode'} — switch
+        </button>
       </div>
 
       {/* Chord selector */}
@@ -133,57 +164,16 @@ export default function App() {
         onChordChange={handleChordChange}
       />
 
-      {/* Right panel */}
+      {/* Settings gear + strum indicator + legend */}
       <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
 
-        {/* Chord recognition toggle */}
-        <div className="glass-panel rounded-2xl">
-          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Chord detection</p>
-          <button
-            onClick={() => setAutoChord(v => !v)}
-            className={`glass-btn w-full text-sm ${autoChord ? 'glass-btn-active' : ''}`}
-          >
-            {autoChord ? 'Auto-detect: On' : 'Auto-detect: Off'}
-          </button>
-        </div>
-
-        {/* Handedness toggle */}
-        <div className="glass-panel rounded-2xl">
-          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Playing style</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setLeftHanded(false)}
-              className={`glass-btn flex-1 text-sm ${!leftHanded ? 'glass-btn-active' : ''}`}
-            >
-              Right-handed
-            </button>
-            <button
-              onClick={() => setLeftHanded(true)}
-              className={`glass-btn flex-1 text-sm ${leftHanded ? 'glass-btn-active' : ''}`}
-            >
-              Left-handed
-            </button>
-          </div>
-        </div>
-
-        {/* Strum zone debug toggle */}
-        <div className="glass-panel rounded-2xl">
-          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Debug</p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => setShowTracking(v => !v)}
-              className={`glass-btn w-full text-sm ${!showTracking ? 'glass-btn-active' : ''}`}
-            >
-              {showTracking ? 'Hide tracking' : 'Show tracking'}
-            </button>
-            <button
-              onClick={() => setShowStrumZone(v => !v)}
-              className={`glass-btn w-full text-sm ${showStrumZone ? 'glass-btn-active' : ''}`}
-            >
-              {showStrumZone ? 'Hide strum zone' : 'Show strum zone'}
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={() => setSettingsOpen(v => !v)}
+          className={`glass-btn text-xl ${settingsOpen ? 'glass-btn-active' : ''}`}
+          style={{ padding: '0.65rem 1rem' }}
+        >
+          ⚙️
+        </button>
 
         {/* Strum indicator */}
         <div className="glass-panel rounded-2xl">
@@ -194,21 +184,41 @@ export default function App() {
             />
             <span className={`text-sm font-semibold transition-colors duration-100
               ${strumFlash ? 'text-emerald-400' : 'text-slate-400'}`}>
-              {strumFlash ? selectedChord + ' ♪' : 'Swing your hand through the strings'}
+              {mode === 'rock'
+                ? (strumDirection ? `${strumDirection === 'down' ? '↓' : '↑'} ${selectedChord}` : 'Strum through the strings')
+                : (strumFlash ? selectedChord + ' ♪' : 'Swing your hand through the strings')
+              }
             </span>
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="glass-panel rounded-2xl">
-          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Legend</p>
-          <ul className="text-slate-300 text-sm space-y-1">
-            <li><span className="text-emerald-400 font-bold">●</span> Finger position dots</li>
-            <li><span className="text-orange-400 font-bold">●</span> Strumming hand</li>
-            <li><span className="text-purple-400 font-bold">●</span> Fretting hand</li>
-          </ul>
-        </div>
+        {/* Legend — only in learn mode */}
+        {mode === 'learn' && (
+          <div className="glass-panel rounded-2xl">
+            <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Legend</p>
+            <ul className="text-slate-300 text-sm space-y-1">
+              <li><span className="text-emerald-400 font-bold">●</span> Finger position dots</li>
+              <li><span className="text-orange-400 font-bold">●</span> Strumming hand</li>
+              <li><span className="text-purple-400 font-bold">●</span> Fretting hand</li>
+            </ul>
+          </div>
+        )}
       </div>
+
+      {/* Settings panel */}
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        mode={mode}
+        autoChord={autoChordLearn}
+        setAutoChord={setAutoChordLearn}
+        leftHanded={leftHanded}
+        setLeftHanded={setLeftHanded}
+        showTracking={showTracking}
+        setShowTracking={setShowTracking}
+        showStrumZone={showStrumZone}
+        setShowStrumZone={setShowStrumZone}
+      />
 
       {/* Dark mode toggle — bottom left */}
       <div className="absolute bottom-6 left-6 z-20">
