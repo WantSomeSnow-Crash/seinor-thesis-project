@@ -97,7 +97,15 @@ export default function App() {
   }
 
   if (!mode) {
-    return <ModeSelect onSelect={setMode} dwellCursor={dwellCursor} />
+    return (
+      <>
+        {/* Camera runs hidden so useMediaPipe can feed hand tracking to dwell-click */}
+        <div style={{ position: 'fixed', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}>
+          <CameraFeed onStreamReady={handleStreamReady} />
+        </div>
+        <ModeSelect onSelect={setMode} dwellCursor={dwellCursor} />
+      </>
+    )
   }
 
   // ── Main app ─────────────────────────────────────────────────────────────────
