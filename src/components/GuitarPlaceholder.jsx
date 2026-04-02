@@ -42,6 +42,7 @@ export default function GuitarPlaceholder({
   guitarStateRef,
   strumPulse     = 0,
   showStrumZone  = false,
+  showDots       = true,
 }) {
   const groupRef    = useRef()
   const dotsGroupRef = useRef()
@@ -166,10 +167,12 @@ export default function GuitarPlaceholder({
           <primitive object={modelScene.current} />
         </group>
 
-        {/* Fretboard dots — position shifted by DOT_SCREEN_OFFSET_X/Y in chords.js */}
-        <group ref={dotsGroupRef}>
-          <FretboardDots selectedChord={selectedChord} />
-        </group>
+        {/* Fretboard dots — hidden in rock mode */}
+        {showDots && (
+          <group ref={dotsGroupRef}>
+            <FretboardDots selectedChord={selectedChord} />
+          </group>
+        )}
       </group>
 
       {/* StrumZoneDebug lives outside the guitar group so it uses screen-space
