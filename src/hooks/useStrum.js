@@ -11,22 +11,26 @@ import {
   STRING_COOLDOWN,
 } from '../data/strumZone'
 
-/**
- * Detects when the strumming hand sweeps across individual strings.
- * Fires onStringStrum(stringIndex) for each string crossed.
- *
- * guitarStateRef: { x, y, scale, rotation } in orthographic world-space pixels
- * size:           { width, height } matching world-space units
- * leftHanded:     if true, strumming hand is the player's left hand
- */
-export default function useStrum({ handResults, guitarStateRef, size, leftHanded, onStringStrum }) {
-  const prevZoneRef      = useRef(null)
-  const lastStrumRef     = useRef(Array(NUM_STRINGS).fill(0))
-  const onStrumRef       = useRef(onStringStrum)
-  const leftHandedRef    = useRef(leftHanded)
+// Minimum ms between whole-gesture strum fires (used for rock mode)
+const GESTURE_COOLDOWN = 250
 
-  useEffect(() => { onStrumRef.current    = onStringStrum }, [onStringStrum])
-  useEffect(() => { leftHandedRef.current = leftHanded    }, [leftHanded])
+/**
+ * Detects when the strumming hand sweeps across strings.
+ *
+ * onStringStrum(stringIndex) — fires per string crossed (learn mode)
+ * onStrum(direction)         — fires once per sweep gesture, 'up' or 'down' (rock mode)
+ */
+export default function useStrum({ handResults, guitarStateRef, size, leftHanded, onStringStrum, onStrum }) {
+  const prevZoneRef       = useRef(null)
+  const lastStrumRef      = useRef(Array(NUM_STRINGS).fill(0))
+  const lastGestureRef    = useRef(0)
+  const onStringStrumRef  = useRef(onStringStrum)
+  const onStrumRef        = useRef(onStrum)
+  const leftHandedRef     = useRef(leftHanded)
+
+  useEffect(() => { onStringStrumRef.current = onStringStrum }, [onStringStrum])
+  useEffect(() => { onStrumRef.current       = onStrum       }, [onStrum])
+  useEffect(() => { leftHandedRef.current    = leftHanded    }, [leftHanded])
 
   useEffect(() => {
     if (!handResults?.landmarks?.length) {
@@ -56,41 +60,45 @@ export default function useStrum({ handResults, guitarStateRef, size, leftHanded
     const { x: gx, y: gy, scale, rotation } = guitarStateRef.current ?? {}
     if (!scale || rotation == null) return
 
-    // Total scale from model-local units → screen pixels
     const effectiveScale = scale * MODEL_NORM_SCALE
     const cos = Math.cos(rotation)
     const sin = Math.sin(rotation)
 
-    // Project hand position into guitar local space (apply screen-pixel offsets)
     const dx     =  wx - (gx + STRUM_OFFSET_X)
     const dy     =  wy - (gy + STRUM_OFFSET_Y)
     const localX = ( dx * cos + dy * sin) / effectiveScale
     const localY = (-dx * sin + dy * cos) / effectiveScale
 
-    // Only detect strums in the body / soundhole zone, not on the neck
     if (localY < STRUM_Y_MIN || localY > STRUM_Y_MAX) {
       prevZoneRef.current = null
       return
     }
 
-    // Map localX to the nearest string index (0 = low E, 5 = high e)
     const rawZone    = Math.round((localX - FIRST_STRING_X) / STRING_SPACING)
     const stringZone = Math.max(0, Math.min(NUM_STRINGS - 1, rawZone))
 
     const prevZone = prevZoneRef.current
     prevZoneRef.current = stringZone
 
-    // No previous position or still on same string — nothing to fire yet
     if (prevZone === null || prevZone === stringZone) return
 
-    // Hand swept across one or more strings — fire each one in sweep order
     const now = Date.now()
-    const lo  = Math.min(prevZone, stringZone)
-    const hi  = Math.max(prevZone, stringZone)
 
+    // Direction: toward higher string index (low E → high e) = down strum
+    const direction = stringZone > prevZone ? 'down' : 'up'
+
+    // Fire once-per-gesture for rock mode
+    if (now - lastGestureRef.current > GESTURE_COOLDOWN) {
+      onStrumRef.current?.(direction)
+      lastGestureRef.current = now
+    }
+
+    // Fire per-string for learn mode
+    const lo = Math.min(prevZone, stringZone)
+    const hi = Math.max(prevZone, stringZone)
     for (let i = lo; i <= hi; i++) {
       if (now - lastStrumRef.current[i] > STRING_COOLDOWN) {
-        onStrumRef.current?.(i)
+        onStringStrumRef.current?.(i)
         lastStrumRef.current[i] = now
       }
     }
