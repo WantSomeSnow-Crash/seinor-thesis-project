@@ -1,60 +1,97 @@
 import { useRef, useCallback } from 'react'
-import * as Tone from 'tone'
+
+// All unique note samples used across every chord
+const NOTE_FILES = [
+  'E2','A2','B2','C3','D3','E3','G2','G3','Gs3',
+  'A3','B3','C4','D4','E4','Fs4','G4',
+]
+
+// Strum samples: one up + one down per chord
+const CHORD_NAMES = ['Em', 'E', 'G', 'C', 'D', 'Am']
+const DIRECTIONS  = ['down', 'up']
 
 export default function useAudio() {
-  const synthsRef   = useRef(null)
-  const reverbRef   = useRef(null)
-  const startedRef  = useRef(false)
-  const cooldownRef = useRef(0)
+  const ctxRef          = useRef(null)
+  const buffersRef      = useRef({})   // note name → AudioBuffer
+  const strumBuffersRef = useRef({})   // "Em_down" etc → AudioBuffer
+  const loadedRef       = useRef(false)
 
   const initAudio = useCallback(async () => {
-    if (startedRef.current) return
-    await Tone.start()
-    startedRef.current = true
+    if (loadedRef.current) return
 
-    const reverb = new Tone.Reverb({ decay: 2.2, wet: 0.30 }).toDestination()
-    await reverb.ready
-    reverbRef.current = reverb
+    if (!ctxRef.current) {
+      ctxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+    }
+    const ctx = ctxRef.current
+    if (ctx.state === 'suspended') await ctx.resume()
 
-    // One PluckSynth per string — Karplus-Strong algorithm gives a realistic pluck
-    synthsRef.current = Array.from({ length: 6 }, () =>
-      new Tone.PluckSynth({
-        attackNoise : 1.4,
-        dampening   : 3800,
-        resonance   : 0.96,
-      }).connect(reverb)
-    )
+    // Load individual note samples + strum samples in parallel
+    await Promise.all([
+      ...NOTE_FILES.map(async (note) => {
+        try {
+          const res = await fetch(`/sounds/${note}.mp3`)
+          const buf = await res.arrayBuffer()
+          buffersRef.current[note] = await ctx.decodeAudioData(buf)
+        } catch (e) {
+          console.warn(`Could not load sample: ${note}.mp3`, e)
+        }
+      }),
+      ...CHORD_NAMES.flatMap(chord =>
+        DIRECTIONS.map(async (dir) => {
+          const key = `${chord}_${dir}`
+          try {
+            const res = await fetch(`/sounds/strums/${key}.mp3`)
+            const buf = await res.arrayBuffer()
+            strumBuffersRef.current[key] = await ctx.decodeAudioData(buf)
+          } catch (e) {
+            console.warn(`Could not load strum: ${key}.mp3`, e)
+          }
+        })
+      ),
+    ])
+
+    loadedRef.current = true
   }, [])
 
-  const playChord = useCallback(async (notes) => {
-    if (!notes?.length) return
-
-    // Enforce a short cooldown so rapid re-triggers don't stack
-    const now = Date.now()
-    if (now - cooldownRef.current < 350) return
-    cooldownRef.current = now
-
-    await initAudio()
-    if (!synthsRef.current) return
-
-    // Strum: each string fires 45 ms after the previous
-    notes.forEach((note, i) => {
-      setTimeout(() => {
-        try {
-          synthsRef.current[i % 6]?.triggerAttack(note, Tone.now())
-        } catch (_) { /* ignore note errors */ }
-      }, i * 45)
-    })
-  }, [initAudio])
-
+  // Play a single note sample (learn mode)
   const playString = useCallback(async (stringIndex, note) => {
     if (!note) return
     await initAudio()
-    if (!synthsRef.current) return
-    try {
-      synthsRef.current[stringIndex % 6]?.triggerAttack(note, Tone.now())
-    } catch (_) { /* ignore note errors */ }
+    const ctx = ctxRef.current
+    const buf = buffersRef.current[note]
+    if (!ctx || !buf) return
+    const src  = ctx.createBufferSource()
+    src.buffer = buf
+    const gain = ctx.createGain()
+    gain.gain.value = 1.0
+    src.connect(gain)
+    gain.connect(ctx.destination)
+    src.start()
   }, [initAudio])
 
-  return { playChord, playString, initAudio }
+  // Play a full chord strum recording (rock mode)
+  const playStrum = useCallback(async (chord, direction) => {
+    await initAudio()
+    const ctx = ctxRef.current
+    const buf = strumBuffersRef.current[`${chord}_${direction}`]
+    if (!ctx || !buf) return
+    const src  = ctx.createBufferSource()
+    src.buffer = buf
+    const gain = ctx.createGain()
+    gain.gain.value = 1.2
+    src.connect(gain)
+    gain.connect(ctx.destination)
+    src.start()
+  }, [initAudio])
+
+  // playChord kept for compatibility
+  const playChord = useCallback(async (notes) => {
+    if (!notes?.length) return
+    await initAudio()
+    notes.forEach((note, i) => {
+      setTimeout(() => playString(i, note), i * 45)
+    })
+  }, [initAudio, playString])
+
+  return { playChord, playString, playStrum, initAudio }
 }
