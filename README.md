@@ -1,16 +1,9 @@
-# React + Vite
+# Air Guitar - Name probabaly changing 
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A site that allows people to play and learn guitar right from the internet no guitar needed 
 
-Currently, two official plugins are available:
+The site uses motion tracking and 3d modeled guitars to create an AR guitar on you that lets you interact and learn the fingerings of differnt chords. Theres also a mode to just mess around and have fun 
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Future chords will be added as well as more guitars to allows for more user customizability
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The site and project is mainly built off JavaScript, React, HTML and CSS as well as vite 
