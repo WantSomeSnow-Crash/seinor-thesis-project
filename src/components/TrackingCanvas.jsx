@@ -13,12 +13,25 @@ const HAND_CONNECTIONS = [
   [13,17],[0,17],[17,18],[18,19],[19,20], // pinky + palm
 ]
 
+// Only the distal segments (last 2 joints) of each finger — used in top layer
+// to make fingertips appear to "poke through" the guitar neck/body
+const TIP_CONNECTIONS = [
+  [2,3],[3,4],     // thumb
+  [6,7],[7,8],     // index
+  [10,11],[11,12], // middle
+  [14,15],[15,16], // ring
+  [18,19],[19,20], // pinky
+]
+
 // Landmark indices to highlight specially
 const HIP_INDICES    = new Set([23, 24])
 const SHOULDER_IDX   = new Set([11, 12])
 const FINGERTIP_IDX  = new Set([4, 8, 12, 16, 20])
 
-export default function TrackingCanvas({ poseResults, handResults, visible = true }) {
+// topLayer=false → full skeleton behind guitar (z-10)
+// topLayer=true  → fingertip segments in front of guitar (z-15), creating
+//                  a "fingers wrap around neck / over body" illusion
+export default function TrackingCanvas({ poseResults, handResults, visible = true, topLayer = false }) {
   const canvasRef = useRef(null)
 
   useEffect(() => {
@@ -26,7 +39,6 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
     if (!canvas) return
     const ctx = canvas.getContext('2d')
 
-    // Match canvas resolution to its CSS size
     const { width, height } = canvas.getBoundingClientRect()
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width  = width
@@ -38,17 +50,58 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
     const W = canvas.width
     const H = canvas.height
 
-    // Helper: normalised → canvas coords
-    // MediaPipe gives x in [0,1] measured from the *natural* left of the video.
-    // The video is CSS-mirrored (scaleX(-1)), so we mirror x here too.
     const px = (lm) => ((1 - lm.x) * W)
     const py = (lm) => (lm.y * H)
 
-    // ── Draw pose ─────────────────────────────────────────────────────────────
+    // ── Top layer: only fingertip segments for all visible hands ─────────────
+    if (topLayer) {
+      if (handResults?.landmarks) {
+        handResults.landmarks.forEach((hand, hi) => {
+          if (!hand) return
+
+          const handedness = handResults.handedness?.[hi]?.[0]?.categoryName ?? ''
+          const isRight    = handedness === 'Right'
+          const tipColor   = isRight ? '#f97316' : '#a855f7'
+          const lineColor  = isRight ? 'rgba(249,115,22,0.80)' : 'rgba(168,85,247,0.80)'
+          const glowColor  = isRight ? 'rgba(249,115,22,0.40)' : 'rgba(168,85,247,0.40)'
+
+          // Distal finger segments
+          ctx.lineWidth   = 2.5
+          ctx.strokeStyle = lineColor
+          for (const [a, b] of TIP_CONNECTIONS) {
+            if (!hand[a] || !hand[b]) continue
+            ctx.beginPath()
+            ctx.moveTo(px(hand[a]), py(hand[a]))
+            ctx.lineTo(px(hand[b]), py(hand[b]))
+            ctx.stroke()
+          }
+
+          // Fingertip dots with glow
+          for (const idx of FINGERTIP_IDX) {
+            const lm = hand[idx]
+            if (!lm) continue
+
+            ctx.beginPath()
+            ctx.arc(px(lm), py(lm), 10, 0, Math.PI * 2)
+            ctx.strokeStyle = glowColor
+            ctx.lineWidth   = 3
+            ctx.stroke()
+
+            ctx.beginPath()
+            ctx.arc(px(lm), py(lm), 6, 0, Math.PI * 2)
+            ctx.fillStyle = tipColor
+            ctx.fill()
+          }
+        })
+      }
+      return
+    }
+
+    // ── Bottom layer: full pose + full hand skeletons ─────────────────────────
+
     if (poseResults?.landmarks?.[0]) {
       const lms = poseResults.landmarks[0]
 
-      // Skeleton lines
       ctx.lineWidth   = 2
       ctx.strokeStyle = 'rgba(99, 255, 200, 0.65)'
       for (const { start, end } of POSE_CONNECTIONS) {
@@ -59,7 +112,6 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
         ctx.stroke()
       }
 
-      // Landmark dots
       for (let i = 0; i < lms.length; i++) {
         const lm = lms[i]
         if (!lm) continue
@@ -72,9 +124,9 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
         ctx.arc(px(lm), py(lm), radius, 0, Math.PI * 2)
 
         if (isHip) {
-          ctx.fillStyle = '#10b981'   // emerald — anchor points
+          ctx.fillStyle = '#10b981'
         } else if (isShoulder) {
-          ctx.fillStyle = '#3b82f6'   // blue
+          ctx.fillStyle = '#3b82f6'
         } else {
           ctx.fillStyle = 'rgba(255,255,255,0.55)'
         }
@@ -82,19 +134,17 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
       }
     }
 
-    // ── Draw hands ────────────────────────────────────────────────────────────
     if (handResults?.landmarks) {
       handResults.landmarks.forEach((hand, hi) => {
         if (!hand) return
 
         const handedness = handResults.handedness?.[hi]?.[0]?.categoryName ?? ''
-        const isRight    = handedness === 'Right'   // NB: MediaPipe labels from the video's POV; we re-map below
+        const isRight    = handedness === 'Right'
 
         const lineColor = isRight
-          ? 'rgba(249, 115, 22, 0.75)'   // orange — strumming hand
-          : 'rgba(168, 85, 247, 0.75)'   // purple — fretting hand
+          ? 'rgba(249, 115, 22, 0.75)'
+          : 'rgba(168, 85, 247, 0.75)'
 
-        // Skeleton
         ctx.lineWidth   = 2
         ctx.strokeStyle = lineColor
         for (const [a, b] of HAND_CONNECTIONS) {
@@ -105,7 +155,6 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
           ctx.stroke()
         }
 
-        // Knuckle dots + glowing fingertips
         for (let i = 0; i < hand.length; i++) {
           const lm = hand[i]
           if (!lm) continue
@@ -114,7 +163,6 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
           const r     = isTip ? 6 : 3
 
           if (isTip) {
-            // Glow ring
             ctx.beginPath()
             ctx.arc(px(lm), py(lm), r + 4, 0, Math.PI * 2)
             ctx.strokeStyle = isRight ? 'rgba(249,115,22,0.35)' : 'rgba(168,85,247,0.35)'
@@ -129,12 +177,12 @@ export default function TrackingCanvas({ poseResults, handResults, visible = tru
         }
       })
     }
-  }, [poseResults, handResults])
+  }, [poseResults, handResults, topLayer])
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full z-10 pointer-events-none"
+      className={`absolute inset-0 w-full h-full pointer-events-none ${topLayer ? 'z-[15]' : 'z-10'}`}
       style={{ opacity: visible ? 1 : 0 }}
     />
   )

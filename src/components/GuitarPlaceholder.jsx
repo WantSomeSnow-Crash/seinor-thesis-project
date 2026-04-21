@@ -5,15 +5,13 @@ import * as THREE from 'three'
 import FretboardDots from './FretboardDots'
 import StrumZoneDebug from './StrumZoneDebug'
 import { DOT_SCREEN_OFFSET_X, DOT_SCREEN_OFFSET_Y } from '../data/chords'
+import { MODEL_NORM_SCALE } from '../data/strumZone'
 
 // ── Model calibration ─────────────────────────────────────────────────────────
-// Tweak these if the guitar still looks off after changes:
-//   MODEL_ROTATION  – if neck points wrong way, try [0,0,Math.PI/2] or [0,Math.PI,0]
-//   MODEL_NORM_SCALE – increase to make the model bigger inside the anchor group
-//   MODEL_X/Y_OFFSET – nudge the model body onto the anchor point
+// To scale the guitar: change MODEL_NORM_SCALE in src/data/strumZone.js
+// That single value controls the model size, dot positions, and strum zone together.
 
-const MODEL_ROTATION   = [0, 40, 0]   // adjust once you see how the model loads
-const MODEL_NORM_SCALE = 2.0
+const MODEL_ROTATION   = [0, 40, 0]
 const MODEL_X_OFFSET   = 0.0
 const MODEL_Y_OFFSET   = 0.0
 
@@ -135,7 +133,7 @@ export default function GuitarPlaceholder({
       }
     }
 
-    // Convert screen-pixel dot offset → guitar local space
+    // Convert screen-pixel dot offset → outer group local space
     if (dotsGroupRef.current) {
       const rot = group.rotation.z
       const s   = group.scale.x
@@ -158,7 +156,7 @@ export default function GuitarPlaceholder({
   return (
     <>
       <group ref={groupRef} visible={false}>
-        {/* Guitar model with its calibration rotation */}
+        {/* Guitar model — rotated and scaled */}
         <group
           rotation={MODEL_ROTATION}
           scale={[MODEL_NORM_SCALE, MODEL_NORM_SCALE, MODEL_NORM_SCALE]}
@@ -167,12 +165,13 @@ export default function GuitarPlaceholder({
           <primitive object={modelScene.current} />
         </group>
 
-        {/* Fretboard dots — hidden in rock mode */}
+        {/* Dots — direct child of outer group, no extra scale or rotation */}
         {showDots && (
           <group ref={dotsGroupRef}>
             <FretboardDots selectedChord={selectedChord} />
           </group>
         )}
+
       </group>
 
       {/* StrumZoneDebug lives outside the guitar group so it uses screen-space

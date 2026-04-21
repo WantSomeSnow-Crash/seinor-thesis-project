@@ -1,5 +1,6 @@
 const CHORDS = [
   { id: 'Em', label: 'E minor' },
+  { id: 'E',  label: 'E Major' },
   { id: 'G',  label: 'G Major' },
   { id: 'C',  label: 'C Major' },
   { id: 'D',  label: 'D Major' },

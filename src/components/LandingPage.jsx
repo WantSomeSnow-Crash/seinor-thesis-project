@@ -1,8 +1,43 @@
+import { useEffect, useRef, useState } from 'react'
+import useMediaPipe from '../hooks/useMediaPipe'
+import useDwellClick from '../hooks/useDwellClick'
+import HandCursor from './HandCursor'
+
 export default function LandingPage({ onEnter }) {
+  const [camStatus, setCamStatus] = useState('pending')  // pending | granted | denied
+  const videoRef = useRef(null)
+
+  // Ask for camera permission as soon as the page loads
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+        setCamStatus('granted')
+      })
+      .catch(() => setCamStatus('denied'))
+  }, [])
+
+  // Pass videoRef directly — useMediaPipe reads .current each frame so it
+  // picks up the stream automatically once the camera is granted
+  const { handResults } = useMediaPipe(videoRef)
+  const dwellCursor     = useDwellClick({ handResults, enabled: camStatus === 'granted' })
+
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-black">
 
-      {/* Background gradient */}
+      {/* Hidden video — needed for hand tracking but not shown on landing page */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="absolute"
+        style={{ opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+      />
+
+      {/* Background gradient overlay */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -29,33 +64,36 @@ export default function LandingPage({ onEnter }) {
           </p>
         </div>
 
-        {/* Feature highlights
-        <div className="flex flex-col gap-3 w-full">
-          {[
-            { icon: '📷', label: 'Real-time pose & hand tracking' },
-            { icon: '🎵', label: 'Strum chords with natural gestures' },
-            { icon: '🎸', label: '3D guitar follows your body' },
-          ].map(({ icon, label }) => (
-            <div key={label} className="glass-panel rounded-2xl flex items-center gap-4 text-left">
-              <span className="text-2xl">{icon}</span>
-              <span className="text-slate-200 text-sm font-medium">{label}</span>
-            </div>
-          ))}
-        </div> */}
+        {/* Camera status */}
+        {camStatus === 'pending' && (
+          <div className="glass-panel rounded-2xl text-slate-300 text-sm">
+            Requesting camera access…
+          </div>
+        )}
+        {camStatus === 'denied' && (
+          <div className="glass-panel rounded-2xl text-red-400 text-sm">
+            Camera access denied. Please allow camera access in your browser and reload.
+          </div>
+        )}
 
-        {/* CTA */}
-        <button
-          onClick={onEnter}
-          className="glass-btn text-lg w-full"
-        >
-          Get Started
-        </button>
-
-        {/* Footer note */}
-        <p className="text-slate-600 text-xs">
-          Allow camera access when prompted.
-        </p>
+        {/* CTA — only shown once camera is ready */}
+        {camStatus === 'granted' && (
+          <>
+            <button
+              onClick={onEnter}
+              className="glass-btn text-lg w-full"
+            >
+              Get Started
+            </button>
+            <p className="text-slate-500 text-xs">
+              Point your finger at the button and hold to continue hands-free
+            </p>
+          </>
+        )}
       </div>
+
+      {/* Hand cursor with dwell ring */}
+      <HandCursor cursor={dwellCursor} />
     </div>
   )
 }

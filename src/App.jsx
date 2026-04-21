@@ -3,6 +3,7 @@ import CameraFeed from './components/CameraFeed'
 import ChordSelector from './components/ChordSelector'
 import StatusBar from './components/StatusBar'
 import TrackingCanvas from './components/TrackingCanvas'
+import HandOverlay from './components/HandOverlay'
 import GuitarScene from './components/GuitarScene'
 import LandingPage from './components/LandingPage'
 import ModeSelect from './components/ModeSelect'
@@ -13,6 +14,7 @@ import useDwellClick from './hooks/useDwellClick'
 import useChordRecognition from './hooks/useChordRecognition'
 import HandCursor from './components/HandCursor'
 import SettingsPanel from './components/SettingsPanel'
+import AmpSelector from './components/AmpSelector'
 import { CHORDS } from './data/chords'
 import './index.css'
 
@@ -29,14 +31,16 @@ export default function App() {
   const [showTracking, setShowTracking] = useState(true)
   const [darkMode, setDarkMode]         = useState(false)
   const [autoChordLearn, setAutoChordLearn] = useState(false)
+  const [autoChordRock, setAutoChordRock]   = useState(true)
+  const [currentAmp, setCurrentAmp]         = useState('clean')
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const videoRef       = useRef(null)
   const guitarStateRef = useRef({ x: 0, y: 0, scale: 100 })
   const sizeRef        = useRef({ width: window.innerWidth, height: window.innerHeight })
 
-  // Rock mode always has auto-detect on; learn mode uses its own toggle
-  const autoChord = mode === 'rock' ? true : autoChordLearn
+  // Each mode has its own auto-detect toggle
+  const autoChord = mode === 'rock' ? autoChordRock : autoChordLearn
 
   const handleStreamReady = useCallback((videoEl) => {
     videoRef.current = videoEl
@@ -44,7 +48,12 @@ export default function App() {
   }, [])
 
   const { poseResults, handResults, trackingReady } = useMediaPipe(videoRef)
-  const { playString, playStrum, initAudio }        = useAudio()
+  const { playString, playStrum, initAudio, setAmp } = useAudio()
+
+  const handleAmpChange = useCallback((ampKey) => {
+    setCurrentAmp(ampKey)
+    setAmp(ampKey)
+  }, [setAmp])
   const dwellCursor                                 = useDwellClick({ handResults })
 
   // Learn mode — play individual string note
@@ -117,8 +126,11 @@ export default function App() {
       {/* Layer 1 — camera */}
       <CameraFeed onStreamReady={handleStreamReady} />
 
-      {/* Layer 2 — skeleton canvas */}
+      {/* Layer 2a — skeleton canvas (behind guitar) */}
       <TrackingCanvas poseResults={poseResults} handResults={handResults} visible={showTracking} />
+
+      {/* Layer 2b — real camera pixels for each hand, rendered over the guitar */}
+      <HandOverlay videoRef={videoRef} handResults={handResults} visible={showTracking} />
 
       {/* Layer 3 — 3D guitar */}
       <GuitarScene
@@ -218,14 +230,16 @@ export default function App() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         mode={mode}
-        autoChord={autoChordLearn}
-        setAutoChord={setAutoChordLearn}
+        autoChord={autoChord}
+        setAutoChord={mode === 'rock' ? setAutoChordRock : setAutoChordLearn}
         leftHanded={leftHanded}
         setLeftHanded={setLeftHanded}
         showTracking={showTracking}
         setShowTracking={setShowTracking}
         showStrumZone={showStrumZone}
         setShowStrumZone={setShowStrumZone}
+        currentAmp={currentAmp}
+        onAmpChange={handleAmpChange}
       />
 
       {/* Dark mode toggle — bottom left */}

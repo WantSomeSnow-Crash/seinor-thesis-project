@@ -1,3 +1,5 @@
+import AmpSelector from './AmpSelector'
+
 export default function SettingsPanel({
   open,
   onClose,
@@ -10,6 +12,8 @@ export default function SettingsPanel({
   setShowTracking,
   showStrumZone,
   setShowStrumZone,
+  currentAmp,
+  onAmpChange,
 }) {
   return (
     <>
@@ -48,23 +52,19 @@ export default function SettingsPanel({
           </button>
         </div>
 
-        {/* Chord detection — always on in rock mode, toggleable in learn mode */}
-        {mode === 'rock' ? (
-          <div className="glass-panel rounded-2xl">
-            <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Chord detection</p>
-            <div className="glass-btn w-full text-sm glass-btn-active text-center">Auto-detect: On</div>
-          </div>
-        ) : (
-          <div className="glass-panel rounded-2xl">
-            <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Chord detection</p>
-            <button
-              onClick={() => setAutoChord(v => !v)}
-              className={`glass-btn w-full text-sm ${autoChord ? 'glass-btn-active' : ''}`}
-            >
-              {autoChord ? 'Auto-detect: On' : 'Auto-detect: Off'}
-            </button>
-          </div>
-        )}
+        {/* Chord detection — toggleable in both modes */}
+        <div className="glass-panel rounded-2xl">
+          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Chord detection</p>
+          <button
+            onClick={() => setAutoChord(v => !v)}
+            className={`glass-btn w-full text-sm ${autoChord ? 'glass-btn-active' : ''}`}
+          >
+            {autoChord ? 'Auto-detect: On' : 'Auto-detect: Off'}
+          </button>
+        </div>
+
+        {/* Amp selector */}
+        <AmpSelector currentAmp={currentAmp} onAmpChange={onAmpChange} />
 
         {/* Playing style */}
         <div className="glass-panel rounded-2xl">
