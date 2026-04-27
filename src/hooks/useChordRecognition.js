@@ -2,22 +2,21 @@ import { useEffect, useRef } from 'react'
 
 // Finger landmark indices: [mcp, pip, dip, tip] for index/middle/ring/pinky
 const FINGER_LANDMARKS = [
-  [5,  6,  7,  8 ],   // index
-  [9,  10, 11, 12],   // middle
-  [13, 14, 15, 16],   // ring
-  [17, 18, 19, 20],   // pinky
+  [5,  6,  7,  8 ],  // index
+  [9,  10, 11, 12],  // middle
+  [13, 14, 15, 16],  // ring
+  [17, 18, 19, 20],  // pinky
 ]
+
+// MCP (base knuckle) index for each finger — used for spread measurement
+const MCP_INDICES = [5, 9, 13, 17]
 
 function dist3(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2)
 }
 
-/**
- * Returns a curl ratio for one finger.
- * 0 = fully extended, 1 = fully curled.
- * Uses the ratio of straight-line tip-to-wrist distance vs the
- * sum of all segment lengths — orientation-independent.
- */
+// Returns 0 (extended) → 1 (fully curled) for one finger.
+// Uses tip-to-wrist vs sum-of-segment-lengths — rotation independent.
 function getFingerCurl(hand, fingerIndex) {
   const [mcpI, pipI, dipI, tipI] = FINGER_LANDMARKS[fingerIndex]
   const wrist = hand[0]
@@ -28,34 +27,61 @@ function getFingerCurl(hand, fingerIndex) {
 
   const extended = dist3(wrist, mcp) + dist3(mcp, pip) + dist3(pip, dip) + dist3(dip, tip)
   const actual   = dist3(wrist, tip)
-
   return extended > 0 ? 1 - actual / extended : 0
 }
 
-// ── Chord profiles ────────────────────────────────────────────────────────────
-// Each entry is [index, middle, ring, pinky] expected curl (0 = open, 1 = fully curled).
-// Values tuned for standard guitar fingering positions.
-//
-// Em:  index + middle pressed (fret 2), ring + pinky open
-// G:   all four fingers pressed across two frets
-// C:   index (fret 1) + middle (fret 2) + ring (fret 3), staircase up
-// D:   index + middle + ring on high strings, pinky open
-// Am:  index + middle + ring similar depth to C/D, pinky open
-const CHORD_PROFILES = {
-  Em: [0.55, 0.55, 0.10, 0.10],
-  G:  [0.50, 0.55, 0.55, 0.55],
-  C:  [0.35, 0.50, 0.65, 0.10],
-  D:  [0.50, 0.55, 0.55, 0.10],
-  Am: [0.38, 0.55, 0.52, 0.10],
+// Spread: distance between the outermost curled fingers' base knuckles,
+// normalized by palm size (wrist → middle MCP). Tells us how wide the
+// chord shape is across the strings — G is very wide, Em is very narrow.
+function getCurledSpread(hand, curls, threshold = 0.30) {
+  const palmSize = dist3(hand[0], hand[9])
+  if (palmSize < 0.001) return 0
+
+  let first = -1, last = -1
+  for (let i = 0; i < 4; i++) {
+    if (curls[i] > threshold) {
+      if (first === -1) first = i
+      last = i
+    }
+  }
+  if (first === -1 || first === last) return 0
+  return dist3(hand[MCP_INDICES[first]], hand[MCP_INDICES[last]]) / palmSize
 }
 
-// How many consecutive matching frames before switching chords.
-// Higher = more stable but slower to respond. 8 ≈ ~0.4s at 20fps.
-const CONFIRM_FRAMES       = 8
+// ── Chord profiles ────────────────────────────────────────────────────────────
+// curls:  [index, middle, ring, pinky] expected curl (0=open, 1=fully curled)
+// spread: normalized distance between outermost curled finger knuckles
+//
+// Key discriminators:
+//   G   → only chord with all 4 fingers curled + very wide spread
+//   Em  → only 2 fingers (index+middle), very narrow spread
+//   E   → 3 fingers in staircase (ring less curled than index+middle)
+//   C   → 3 fingers, progressive staircase (ring deepest)
+//   D   → 3 fingers (index+middle+ring), compact spread
+//   Am  → 3 fingers similar to C but index lighter and less spread
+//
+// Tune spread values if detection feels off — they scale with hand size
+// so should be consistent across users.
+const CHORD_PROFILES = {
+  Em: { curls: [0.55, 0.55, 0.10, 0.10], spread: 0.25 },
+  E:  { curls: [0.55, 0.55, 0.42, 0.10], spread: 0.45 },
+  G:  { curls: [0.50, 0.55, 0.55, 0.55], spread: 0.65 },
+  C:  { curls: [0.35, 0.50, 0.65, 0.10], spread: 0.45 },
+  D:  { curls: [0.50, 0.55, 0.55, 0.10], spread: 0.40 },
+  Am: { curls: [0.38, 0.55, 0.52, 0.10], spread: 0.40 },
+}
 
-// Minimum confidence (0–1) required to accept a match.
-// Lower = more permissive but more false positives.
-const CONFIDENCE_THRESHOLD = 0.60
+// How much each feature contributes to the total score.
+// Curl is the primary signal; spread breaks ties between similar-curl chords.
+const CURL_WEIGHT   = 0.65
+const SPREAD_WEIGHT = 0.35
+
+// Frames the same chord must match before switching.
+// 6 frames ≈ 0.3s at 20fps — responsive but not jittery.
+const CONFIRM_FRAMES = 6
+
+// Minimum confidence to accept a match (0–1).
+const CONFIDENCE_THRESHOLD = 0.55
 
 export default function useChordRecognition({
   handResults,
@@ -85,30 +111,30 @@ export default function useChordRecognition({
     const hand = handResults.landmarks[fretIdx]
     if (!hand) return
 
-    // Compute curl for each of the 4 fingers
-    const curls = [0, 1, 2, 3].map(i => getFingerCurl(hand, i))
+    const curls  = [0, 1, 2, 3].map(i => getFingerCurl(hand, i))
+    const spread = getCurledSpread(hand, curls)
 
-    // Find the chord whose profile is closest (lowest mean squared error)
     let bestChord = null
     let bestScore = Infinity
 
     for (const [chord, profile] of Object.entries(CHORD_PROFILES)) {
-      const score = profile.reduce((sum, expected, i) => sum + (curls[i] - expected) ** 2, 0)
+      const curlMSE   = profile.curls.reduce((s, e, i) => s + (curls[i] - e) ** 2, 0) / 4
+      const spreadErr = (spread - profile.spread) ** 2
+      const score     = CURL_WEIGHT * curlMSE + SPREAD_WEIGHT * spreadErr
+
       if (score < bestScore) {
         bestScore = score
         bestChord = chord
       }
     }
 
-    // Convert MSE to a 0–1 confidence value
-    const confidence = 1 - Math.sqrt(bestScore / 4)
+    const confidence = 1 - Math.sqrt(bestScore)
 
     if (confidence < CONFIDENCE_THRESHOLD) {
       candidateRef.current = { chord: null, count: 0 }
       return
     }
 
-    // Require N consecutive matching frames before firing
     if (bestChord === candidateRef.current.chord) {
       candidateRef.current.count++
       if (candidateRef.current.count === CONFIRM_FRAMES) {

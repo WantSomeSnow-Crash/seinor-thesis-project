@@ -8,6 +8,7 @@ import GuitarScene from './components/GuitarScene'
 import LandingPage from './components/LandingPage'
 import ModeSelect from './components/ModeSelect'
 import GuitarSelect from './components/GuitarSelect'
+import HowToUse from './components/HowToUse'
 import useMediaPipe from './hooks/useMediaPipe'
 import useAudio from './hooks/useAudio'
 import useStrum from './hooks/useStrum'
@@ -35,6 +36,7 @@ export default function App() {
   const [autoChordRock, setAutoChordRock]   = useState(true)
   const [currentAmp, setCurrentAmp]         = useState('clean')
   const [guitarModel, setGuitarModel]       = useState(null)
+  const [showHowTo, setShowHowTo]           = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const videoRef       = useRef(null)
@@ -60,6 +62,7 @@ export default function App() {
   const handleGuitarModelChange = useCallback((model) => {
     setGuitarModel(model)
     setAudioGuitarModel(model)
+    if (model) setShowHowTo(true)
   }, [setGuitarModel, setAudioGuitarModel])
   const dwellCursor                                 = useDwellClick({ handResults })
 
@@ -141,6 +144,17 @@ export default function App() {
     )
   }
 
+  if (showHowTo) {
+    return (
+      <>
+        <div style={{ position: 'fixed', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}>
+          <CameraFeed onStreamReady={handleStreamReady} />
+        </div>
+        <HowToUse mode={mode} onDone={() => setShowHowTo(false)} dwellCursor={dwellCursor} />
+      </>
+    )
+  }
+
   // ── Main app ─────────────────────────────────────────────────────────────────
   const showDots = mode === 'learn'
 
@@ -191,7 +205,7 @@ export default function App() {
       {/* App title + mode badge */}
       <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
         <button
-          onClick={() => handleGuitarModelChange(null)}
+          onClick={() => { handleGuitarModelChange(null); setShowHowTo(false) }}
           className="glass-panel rounded-2xl text-left"
           style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.13)' }}
         >
