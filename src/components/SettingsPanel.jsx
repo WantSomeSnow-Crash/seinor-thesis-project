@@ -14,6 +14,8 @@ export default function SettingsPanel({
   setShowStrumZone,
   currentAmp,
   onAmpChange,
+  guitarModel,
+  onGuitarModelChange,
 }) {
   return (
     <>
@@ -61,6 +63,25 @@ export default function SettingsPanel({
           >
             {autoChord ? 'Auto-detect: On' : 'Auto-detect: Off'}
           </button>
+        </div>
+
+        {/* Guitar selector */}
+        <div className="glass-panel rounded-2xl">
+          <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Guitar</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onGuitarModelChange('electric')}
+              className={`glass-btn flex-1 text-sm ${guitarModel === 'electric' ? 'glass-btn-active' : ''}`}
+            >
+              🎸 Electric
+            </button>
+            <button
+              onClick={() => onGuitarModelChange('acoustic')}
+              className={`glass-btn flex-1 text-sm ${guitarModel === 'acoustic' ? 'glass-btn-active' : ''}`}
+            >
+              🪕 Acoustic
+            </button>
+          </div>
         </div>
 
         {/* Amp selector */}

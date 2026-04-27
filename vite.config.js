@@ -7,4 +7,9 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  server: {
+    watch: {
+      ignored: ['**/node_modules/**', '**/public/**', '**/.git/**'],
+    },
+  },
 })

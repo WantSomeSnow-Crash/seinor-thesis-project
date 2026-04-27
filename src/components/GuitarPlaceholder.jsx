@@ -30,35 +30,82 @@ const _shoulderMid = new THREE.Vector3()
 const _torso       = new THREE.Vector3()
 const _targetScale = new THREE.Vector3()
 
-// Preload so the model is ready before the user steps in frame
-useGLTF.preload('/models/electric_guitar.glb')
+const GUITAR_MODELS = {
+  electric: '/models/electric_guitar.glb',
+  acoustic: '/models/acoustic_guitar.glb',
+}
+
+// Per-model scale multiplier — tune if a model appears too large or small
+const GUITAR_MODEL_SCALE = {
+  electric: 1.0,
+  acoustic: 0.28,
+}
+
+// Per-model position offset in model-local space — tune to align origin to hip anchor
+const GUITAR_MODEL_OFFSET = {
+  electric: [0.0, 0.0],
+  acoustic: [0.0, 0.3],
+}
+
+// Per-model dot screen offsets in pixels — tune X/Y independently per guitar
+// X: positive = right, negative = left
+// Y: positive = up,    negative = down
+const GUITAR_DOT_OFFSET = {
+  electric: { x: DOT_SCREEN_OFFSET_X, y: DOT_SCREEN_OFFSET_Y },
+  acoustic:  { x: DOT_SCREEN_OFFSET_X, y: DOT_SCREEN_OFFSET_Y },
+}
+
+// Preload both models upfront
+useGLTF.preload(GUITAR_MODELS.electric)
+useGLTF.preload(GUITAR_MODELS.acoustic)
 
 export default function GuitarPlaceholder({
   poseResults,
+  handResults,
   leftHanded     = false,
   selectedChord  = 'Em',
   guitarStateRef,
   strumPulse     = 0,
   showStrumZone  = false,
   showDots       = true,
+  guitarModel    = 'electric',
 }) {
   const groupRef    = useRef()
   const dotsGroupRef = useRef()
   const { size } = useThree()
 
-  const { scene } = useGLTF('/models/electric_guitar.glb')
+  const modelPath = GUITAR_MODELS[guitarModel] ?? GUITAR_MODELS.electric
+  const { scene } = useGLTF(modelPath)
 
-  // Clone the scene once so this instance owns its own graph
-  const modelScene = useRef(null)
-  if (!modelScene.current) modelScene.current = scene.clone(true)
+  // Re-clone whenever the model changes, disposing the old clone to free GPU memory
+  const modelScene  = useRef(null)
+  const lastScene   = useRef(null)
+  if (lastScene.current !== scene) {
+    if (modelScene.current) {
+      modelScene.current.traverse(obj => {
+        if (obj.isMesh) {
+          obj.geometry?.dispose()
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+          mats.forEach(m => {
+            m?.map?.dispose()
+            m?.dispose()
+          })
+        }
+      })
+    }
+    lastScene.current  = scene
+    modelScene.current = scene.clone(true)
+  }
 
   const poseRef      = useRef(poseResults)
+  const handRef      = useRef(handResults)
   const leftRef      = useRef(leftHanded)
   const pulseRef     = useRef(0)
   const lastPulseRef = useRef(strumPulse)
 
-  useEffect(() => { poseRef.current = poseResults }, [poseResults])
-  useEffect(() => { leftRef.current = leftHanded  }, [leftHanded])
+  useEffect(() => { poseRef.current  = poseResults  }, [poseResults])
+  useEffect(() => { handRef.current  = handResults  }, [handResults])
+  useEffect(() => { leftRef.current  = leftHanded   }, [leftHanded])
 
   useEffect(() => {
     if (strumPulse !== lastPulseRef.current) {
@@ -119,6 +166,25 @@ export default function GuitarPlaceholder({
     const targetRot   = torsoTilt + guitarAngle
     const scale       = (torsoLen * GUITAR_VS_TORSO) / MODEL_SPAN
 
+    // Neck grab — fretting hand near guitar pulls it slightly
+    const hands = handRef.current?.landmarks ?? []
+    if (hands.length > 0) {
+      let minDist = Infinity
+      let nearHx = 0, nearHy = 0
+      for (const lms of hands) {
+        const hx = wx(lms[0])
+        const hy = wy(lms[0])
+        const d  = Math.hypot(hx - group.position.x, hy - group.position.y)
+        if (d < minDist) { minDist = d; nearHx = hx; nearHy = hy }
+      }
+      const grabRadius = group.scale.x * 1.2
+      if (minDist < grabRadius) {
+        const t = (1 - minDist / grabRadius) * 0.35
+        _anchor.x += (nearHx - _anchor.x) * t
+        _anchor.y += (nearHy - _anchor.y) * t
+      }
+    }
+
     group.position.lerp(_anchor, 0.18)
     group.rotation.z += (targetRot - group.rotation.z) * 0.18
     _targetScale.setScalar(scale)
@@ -135,10 +201,12 @@ export default function GuitarPlaceholder({
 
     // Convert screen-pixel dot offset → outer group local space
     if (dotsGroupRef.current) {
-      const rot = group.rotation.z
-      const s   = group.scale.x
-      dotsGroupRef.current.position.x = ( DOT_SCREEN_OFFSET_X * Math.cos(rot) + DOT_SCREEN_OFFSET_Y * Math.sin(rot)) / s
-      dotsGroupRef.current.position.y = (-DOT_SCREEN_OFFSET_X * Math.sin(rot) + DOT_SCREEN_OFFSET_Y * Math.cos(rot)) / s
+      const rot  = group.rotation.z
+      const s    = group.scale.x
+      const dotX = GUITAR_DOT_OFFSET[guitarModel]?.x ?? DOT_SCREEN_OFFSET_X
+      const dotY = GUITAR_DOT_OFFSET[guitarModel]?.y ?? DOT_SCREEN_OFFSET_Y
+      dotsGroupRef.current.position.x = ( dotX * Math.cos(rot) + dotY * Math.sin(rot)) / s
+      dotsGroupRef.current.position.y = (-dotX * Math.sin(rot) + dotY * Math.cos(rot)) / s
     }
 
     // Strum flash
@@ -159,8 +227,8 @@ export default function GuitarPlaceholder({
         {/* Guitar model — rotated and scaled */}
         <group
           rotation={MODEL_ROTATION}
-          scale={[MODEL_NORM_SCALE, MODEL_NORM_SCALE, MODEL_NORM_SCALE]}
-          position={[MODEL_X_OFFSET, MODEL_Y_OFFSET, 0]}
+          scale={[MODEL_NORM_SCALE * (GUITAR_MODEL_SCALE[guitarModel] ?? 1), MODEL_NORM_SCALE * (GUITAR_MODEL_SCALE[guitarModel] ?? 1), MODEL_NORM_SCALE * (GUITAR_MODEL_SCALE[guitarModel] ?? 1)]}
+          position={[MODEL_X_OFFSET + (GUITAR_MODEL_OFFSET[guitarModel]?.[0] ?? 0), MODEL_Y_OFFSET + (GUITAR_MODEL_OFFSET[guitarModel]?.[1] ?? 0), 0]}
         >
           <primitive object={modelScene.current} />
         </group>
@@ -168,7 +236,7 @@ export default function GuitarPlaceholder({
         {/* Dots — direct child of outer group, no extra scale or rotation */}
         {showDots && (
           <group ref={dotsGroupRef}>
-            <FretboardDots selectedChord={selectedChord} />
+            <FretboardDots selectedChord={selectedChord} guitarModel={guitarModel} />
           </group>
         )}
 
@@ -176,7 +244,7 @@ export default function GuitarPlaceholder({
 
       {/* StrumZoneDebug lives outside the guitar group so it uses screen-space
           coordinates — STRUM_X_CENTER moves it left/right, not diagonally. */}
-      {showStrumZone && <StrumZoneDebug guitarStateRef={guitarStateRef} />}
+      {showStrumZone && <StrumZoneDebug guitarStateRef={guitarStateRef} guitarModel={guitarModel} />}
     </>
   )
 }

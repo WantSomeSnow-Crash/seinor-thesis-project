@@ -7,6 +7,7 @@ import HandOverlay from './components/HandOverlay'
 import GuitarScene from './components/GuitarScene'
 import LandingPage from './components/LandingPage'
 import ModeSelect from './components/ModeSelect'
+import GuitarSelect from './components/GuitarSelect'
 import useMediaPipe from './hooks/useMediaPipe'
 import useAudio from './hooks/useAudio'
 import useStrum from './hooks/useStrum'
@@ -33,6 +34,7 @@ export default function App() {
   const [autoChordLearn, setAutoChordLearn] = useState(false)
   const [autoChordRock, setAutoChordRock]   = useState(true)
   const [currentAmp, setCurrentAmp]         = useState('clean')
+  const [guitarModel, setGuitarModel]       = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const videoRef       = useRef(null)
@@ -48,12 +50,17 @@ export default function App() {
   }, [])
 
   const { poseResults, handResults, trackingReady } = useMediaPipe(videoRef)
-  const { playString, playStrum, initAudio, setAmp } = useAudio()
+  const { playString, playStrum, initAudio, setAmp, setGuitarModel: setAudioGuitarModel } = useAudio()
 
   const handleAmpChange = useCallback((ampKey) => {
     setCurrentAmp(ampKey)
     setAmp(ampKey)
   }, [setAmp])
+
+  const handleGuitarModelChange = useCallback((model) => {
+    setGuitarModel(model)
+    setAudioGuitarModel(model)
+  }, [setGuitarModel, setAudioGuitarModel])
   const dwellCursor                                 = useDwellClick({ handResults })
 
   // Learn mode — play individual string note
@@ -84,6 +91,7 @@ export default function App() {
     guitarStateRef,
     size          : sizeRef.current,
     leftHanded,
+    guitarModel,
     onStringStrum : mode === 'learn' ? handleStringStrum : undefined,
     onStrum       : mode === 'rock'  ? handleRockStrum   : undefined,
   })
@@ -117,6 +125,22 @@ export default function App() {
     )
   }
 
+  if (!guitarModel) {
+    return (
+      <>
+        <div style={{ position: 'fixed', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}>
+          <CameraFeed onStreamReady={handleStreamReady} />
+        </div>
+        <GuitarSelect
+          onSelect={handleGuitarModelChange}
+          onBack={() => setMode(null)}
+          handResults={handResults}
+          dwellCursor={dwellCursor}
+        />
+      </>
+    )
+  }
+
   // ── Main app ─────────────────────────────────────────────────────────────────
   const showDots = mode === 'learn'
 
@@ -135,12 +159,14 @@ export default function App() {
       {/* Layer 3 — 3D guitar */}
       <GuitarScene
         poseResults={poseResults}
+        handResults={handResults}
         leftHanded={leftHanded}
         selectedChord={selectedChord}
         guitarStateRef={guitarStateRef}
         strumPulse={strumPulse}
         showStrumZone={showStrumZone}
         showDots={showDots}
+        guitarModel={guitarModel}
       />
 
       {/* Layer 4 — vignette */}
@@ -164,11 +190,15 @@ export default function App() {
 
       {/* App title + mode badge */}
       <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
-        <div className="glass-panel rounded-2xl">
+        <button
+          onClick={() => handleGuitarModelChange(null)}
+          className="glass-panel rounded-2xl text-left"
+          style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.13)' }}
+        >
           <span className="text-slate-50 font-bold text-lg tracking-tight">
-            🎸 Air Guitar
+            {guitarModel === 'acoustic' ? '🪕 Air Acoustic' : '🎸 Air Guitar'}
           </span>
-        </div>
+        </button>
         <button
           onClick={() => setMode(null)}
           className="glass-btn text-xs text-slate-400"
@@ -240,6 +270,8 @@ export default function App() {
         setShowStrumZone={setShowStrumZone}
         currentAmp={currentAmp}
         onAmpChange={handleAmpChange}
+        guitarModel={guitarModel}
+        onGuitarModelChange={setGuitarModel}
       />
 
       {/* Dark mode toggle — bottom left */}

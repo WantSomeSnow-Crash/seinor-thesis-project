@@ -6,13 +6,14 @@ import {
   STRING_SPACING,
   STRUM_OFFSET_X,
   STRUM_OFFSET_Y,
+  MODEL_STRUM_OFFSET,
   STRUM_Y_MIN,
   STRUM_Y_MAX,
   STRING_COOLDOWN,
 } from '../data/strumZone'
 
 // Minimum ms between whole-gesture strum fires (used for rock mode)
-const GESTURE_COOLDOWN = 250
+const GESTURE_COOLDOWN = 500
 
 /**
  * Detects when the strumming hand sweeps across strings.
@@ -20,7 +21,7 @@ const GESTURE_COOLDOWN = 250
  * onStringStrum(stringIndex) — fires per string crossed (learn mode)
  * onStrum(direction)         — fires once per sweep gesture, 'up' or 'down' (rock mode)
  */
-export default function useStrum({ handResults, guitarStateRef, size, leftHanded, onStringStrum, onStrum }) {
+export default function useStrum({ handResults, guitarStateRef, size, leftHanded, guitarModel, onStringStrum, onStrum }) {
   const prevZoneRef       = useRef(null)
   const lastStrumRef      = useRef(Array(NUM_STRINGS).fill(0))
   const lastGestureRef    = useRef(0)
@@ -64,8 +65,9 @@ export default function useStrum({ handResults, guitarStateRef, size, leftHanded
     const cos = Math.cos(rotation)
     const sin = Math.sin(rotation)
 
-    const dx     =  wx - (gx + STRUM_OFFSET_X)
-    const dy     =  wy - (gy + STRUM_OFFSET_Y)
+    const strumOffset = MODEL_STRUM_OFFSET[guitarModel] ?? { x: STRUM_OFFSET_X, y: STRUM_OFFSET_Y }
+    const dx     =  wx - (gx + strumOffset.x)
+    const dy     =  wy - (gy + strumOffset.y)
     const localX = ( dx * cos + dy * sin) / effectiveScale
     const localY = (-dx * sin + dy * cos) / effectiveScale
 

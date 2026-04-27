@@ -1,13 +1,12 @@
 import { useMemo } from 'react'
 import { CHORDS } from '../data/chords'
 
-/**
- * Renders glowing emerald dots on the fretboard showing where to place fingers.
- * Each chord has its own hand-tuned dot positions in chords.js — edit the
- * `dots` array on each chord to adjust positioning independently.
- */
-export default function FretboardDots({ selectedChord }) {
-  const dots = useMemo(() => CHORDS[selectedChord]?.dots ?? [], [selectedChord])
+export default function FretboardDots({ selectedChord, guitarModel = 'electric' }) {
+  const dots = useMemo(() => {
+    const chord = CHORDS[selectedChord]
+    if (!chord) return []
+    return (guitarModel === 'acoustic' ? chord.acousticDots : null) ?? chord.dots ?? []
+  }, [selectedChord, guitarModel])
 
   return (
     <group>

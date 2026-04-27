@@ -9,6 +9,7 @@ import {
   FIRST_STRING_X,
   STRUM_OFFSET_X,
   STRUM_OFFSET_Y,
+  MODEL_STRUM_OFFSET,
   STRUM_Y_MIN,
   STRUM_Y_MAX,
 } from '../data/strumZone'
@@ -21,7 +22,7 @@ const boxH  = STRUM_Y_MAX - STRUM_Y_MIN
 const boxCX = (FIRST_STRING_X + LAST_STRING_X) / 2
 const boxCY = (STRUM_Y_MIN + STRUM_Y_MAX) / 2
 
-export default function StrumZoneDebug({ guitarStateRef }) {
+export default function StrumZoneDebug({ guitarStateRef, guitarModel = 'electric' }) {
   const groupRef = useRef()
 
   useFrame(() => {
@@ -36,10 +37,9 @@ export default function StrumZoneDebug({ guitarStateRef }) {
     const cos = Math.cos(rotation)
     const sin = Math.sin(rotation)
 
-    // Convert the box centre from guitar local space → screen (world) space,
-    // then apply the same screen-pixel offsets used in useStrum.js
-    const wx = gx + STRUM_OFFSET_X + E * (boxCX * cos - boxCY * sin)
-    const wy = gy + STRUM_OFFSET_Y + E * (boxCX * sin + boxCY * cos)
+    const off = MODEL_STRUM_OFFSET[guitarModel] ?? { x: STRUM_OFFSET_X, y: STRUM_OFFSET_Y }
+    const wx = gx + off.x + E * (boxCX * cos - boxCY * sin)
+    const wy = gy + off.y + E * (boxCX * sin + boxCY * cos)
 
     g.position.set(wx, wy, 0)
     g.rotation.z = rotation

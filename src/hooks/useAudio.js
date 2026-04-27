@@ -179,18 +179,31 @@ function buildAmpChain(ctx, preset, irBuffer) {
 }
 
 export default function useAudio() {
-  const ctxRef          = useRef(null)
-  const buffersRef      = useRef({})
-  const strumBuffersRef = useRef({})
-  const irBuffersRef    = useRef({})
-  const loadedRef       = useRef(false)
-  const ampPresetRef    = useRef('clean')
+  const ctxRef                 = useRef(null)
+  const buffersRef             = useRef({})
+  const strumBuffersRef        = useRef({})
+  const acousticStrumBuffersRef = useRef({})
+  const irBuffersRef           = useRef({})
+  const loadedRef              = useRef(false)
+  const ampPresetRef           = useRef('clean')
+  const guitarModelRef         = useRef('electric')
+  const masterCompressorRef    = useRef(null)
+  const ampChainRef            = useRef(null)
+  const ampChainPresetRef      = useRef(null)
 
   const initAudio = useCallback(async () => {
     if (loadedRef.current) return
 
     if (!ctxRef.current) {
       ctxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      const compressor = ctxRef.current.createDynamicsCompressor()
+      compressor.threshold.value = -6
+      compressor.knee.value      = 3
+      compressor.ratio.value     = 10
+      compressor.attack.value    = 0.003
+      compressor.release.value   = 0.1
+      compressor.connect(ctxRef.current.destination)
+      masterCompressorRef.current = compressor
     }
     const ctx = ctxRef.current
     if (ctx.state === 'suspended') await ctx.resume()
@@ -218,6 +231,18 @@ export default function useAudio() {
           }
         })
       ),
+      ...CHORD_NAMES.flatMap(chord =>
+        DIRECTIONS.map(async (dir) => {
+          const key = `${chord}_${dir}`
+          try {
+            const res = await fetch(`/sounds/strums/acoustic/${key}.mp3`)
+            const buf = await res.arrayBuffer()
+            acousticStrumBuffersRef.current[key] = await ctx.decodeAudioData(buf)
+          } catch (e) {
+            console.warn(`Could not load acoustic strum: ${key}.mp3`, e)
+          }
+        })
+      ),
       // Load IR files for presets that have them
       ...Object.values(AMP_PRESETS)
         .filter(p => p.irFile)
@@ -237,21 +262,36 @@ export default function useAudio() {
 
   const setAmp = useCallback((presetKey) => {
     ampPresetRef.current = presetKey
+    ampChainRef.current      = null
+    ampChainPresetRef.current = null
   }, [])
 
-  // Route a buffer source through the current amp chain
+  const setGuitarModel = useCallback((model) => {
+    guitarModelRef.current = model
+  }, [])
+
+  // Route a buffer source through the shared amp chain → master compressor
   const playWithAmp = useCallback((buf) => {
-    const ctx    = ctxRef.current
+    const ctx = ctxRef.current
     if (!ctx || !buf) return
 
-    const preset   = AMP_PRESETS[ampPresetRef.current] ?? AMP_PRESETS.clean
-    const irBuffer = preset.irFile ? irBuffersRef.current[preset.irFile] : null
-    const chain    = buildAmpChain(ctx, preset, irBuffer)
+    const presetKey = ampPresetRef.current
+    if (!ampChainRef.current || ampChainPresetRef.current !== presetKey) {
+      if (ampChainRef.current) {
+        try { ampChainRef.current.output.disconnect() } catch (_) {}
+      }
+      const preset   = AMP_PRESETS[presetKey] ?? AMP_PRESETS.clean
+      const irBuffer = preset.irFile ? irBuffersRef.current[preset.irFile] : null
+      const chain    = buildAmpChain(ctx, preset, irBuffer)
+      chain.output.connect(masterCompressorRef.current ?? ctx.destination)
+      ampChainRef.current       = chain
+      ampChainPresetRef.current = presetKey
+    }
 
     const src = ctx.createBufferSource()
     src.buffer = buf
-    src.connect(chain.input)
-    chain.output.connect(ctx.destination)
+    src.connect(ampChainRef.current.input)
+    src.onended = () => src.disconnect()
     src.start()
   }, [])
 
@@ -263,7 +303,11 @@ export default function useAudio() {
 
   const playStrum = useCallback(async (chord, direction) => {
     await initAudio()
-    playWithAmp(strumBuffersRef.current[`${chord}_${direction}`])
+    const key = `${chord}_${direction}`
+    const buf = guitarModelRef.current === 'acoustic'
+      ? (acousticStrumBuffersRef.current[key] ?? strumBuffersRef.current[key])
+      : strumBuffersRef.current[key]
+    playWithAmp(buf)
   }, [initAudio, playWithAmp])
 
   const playChord = useCallback(async (notes) => {
@@ -274,5 +318,5 @@ export default function useAudio() {
     })
   }, [initAudio, playString])
 
-  return { playChord, playString, playStrum, initAudio, setAmp }
+  return { playChord, playString, playStrum, initAudio, setAmp, setGuitarModel }
 }

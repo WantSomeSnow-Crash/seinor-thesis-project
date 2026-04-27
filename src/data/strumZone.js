@@ -12,6 +12,12 @@ export const FIRST_STRING_X   = (0 - 2.5) * STRING_SPACING  // = -0.08
 export const STRUM_OFFSET_X   = -330
 export const STRUM_OFFSET_Y   = 260
 
+// Per-model overrides — set to null to fall back to the defaults above
+export const MODEL_STRUM_OFFSET = {
+  electric: { x: STRUM_OFFSET_X, y: STRUM_OFFSET_Y },
+  acoustic:  { x: STRUM_OFFSET_X, y: STRUM_OFFSET_Y - 100 },
+}
+
 // Y range of the strum zone in guitar local space (body / soundhole area)
 export const STRUM_Y_MIN      = -0.20
 export const STRUM_Y_MAX      =  0.001

@@ -25,7 +25,7 @@ export default function useMediaPipe(videoRef) {
       const [pose, hand] = await Promise.all([
         PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: '/models/pose_landmarker_full.task',
+            modelAssetPath: '/models/pose_landmarker_lite.task',
             delegate: 'GPU',
           },
           runningMode: 'VIDEO',
