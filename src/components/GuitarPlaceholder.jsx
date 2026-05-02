@@ -20,7 +20,7 @@ const GUITAR_TILT      = 1
 const ANCHOR_HIP_BLEND = 0.80
 const ANCHOR_UP_RATIO  = -0.10
 const ANCHOR_X_OFFSET  = .60
-const GUITAR_VS_TORSO  = 2.5
+const GUITAR_VS_TORSO  = 3.2
 const MODEL_SPAN       = 2.85
 
 // Reusable vectors
@@ -31,33 +31,45 @@ const _torso       = new THREE.Vector3()
 const _targetScale = new THREE.Vector3()
 
 const GUITAR_MODELS = {
-  electric: '/models/electric_guitar.glb',
-  acoustic: '/models/acoustic_guitar.glb',
+  electric:   '/models/electric_guitar.glb',
+  acoustic:   '/models/acoustic_guitar.glb',
+  Working_RH: '/models/Working_RH.glb',
 }
 
 // Per-model scale multiplier — tune if a model appears too large or small
 const GUITAR_MODEL_SCALE = {
-  electric: 1.0,
-  acoustic: 0.28,
+  electric:   1.0,
+  acoustic:   0.28,
+  Working_RH: 0.20,
+}
+
+// Per-model rotation override [x, y, z] in radians added on top of MODEL_ROTATION
+const GUITAR_MODEL_ROTATION = {
+  electric:   [0, 0, 0],
+  acoustic:   [0, 0, 0],
+  Working_RH: [0, 4, 0],
 }
 
 // Per-model position offset in model-local space — tune to align origin to hip anchor
 const GUITAR_MODEL_OFFSET = {
-  electric: [0.0, 0.0],
-  acoustic: [0.0, 0.3],
+  electric:   [0.0, 0.0],
+  acoustic:   [0.0, 0.3],
+  Working_RH: [0.0, 0.0],
 }
 
 // Per-model dot screen offsets in pixels — tune X/Y independently per guitar
 // X: positive = right, negative = left
 // Y: positive = up,    negative = down
 const GUITAR_DOT_OFFSET = {
-  electric: { x: DOT_SCREEN_OFFSET_X, y: DOT_SCREEN_OFFSET_Y },
-  acoustic:  { x: DOT_SCREEN_OFFSET_X, y: DOT_SCREEN_OFFSET_Y },
+  electric:   { x: DOT_SCREEN_OFFSET_X, y: DOT_SCREEN_OFFSET_Y },
+  acoustic:   { x: DOT_SCREEN_OFFSET_X, y: DOT_SCREEN_OFFSET_Y },
+  Working_RH: { x: DOT_SCREEN_OFFSET_X, y: DOT_SCREEN_OFFSET_Y },
 }
 
-// Preload both models upfront
+// Preload all models upfront
 useGLTF.preload(GUITAR_MODELS.electric)
 useGLTF.preload(GUITAR_MODELS.acoustic)
+useGLTF.preload(GUITAR_MODELS.Working_RH)
 
 export default function GuitarPlaceholder({
   poseResults,
@@ -226,7 +238,11 @@ export default function GuitarPlaceholder({
       <group ref={groupRef} visible={false}>
         {/* Guitar model — rotated and scaled */}
         <group
-          rotation={MODEL_ROTATION}
+          rotation={[
+            MODEL_ROTATION[0] + (GUITAR_MODEL_ROTATION[guitarModel]?.[0] ?? 0),
+            MODEL_ROTATION[1] + (GUITAR_MODEL_ROTATION[guitarModel]?.[1] ?? 0),
+            MODEL_ROTATION[2] + (GUITAR_MODEL_ROTATION[guitarModel]?.[2] ?? 0),
+          ]}
           scale={[MODEL_NORM_SCALE * (GUITAR_MODEL_SCALE[guitarModel] ?? 1), MODEL_NORM_SCALE * (GUITAR_MODEL_SCALE[guitarModel] ?? 1), MODEL_NORM_SCALE * (GUITAR_MODEL_SCALE[guitarModel] ?? 1)]}
           position={[MODEL_X_OFFSET + (GUITAR_MODEL_OFFSET[guitarModel]?.[0] ?? 0), MODEL_Y_OFFSET + (GUITAR_MODEL_OFFSET[guitarModel]?.[1] ?? 0), 0]}
         >

@@ -5,7 +5,9 @@ export default function FretboardDots({ selectedChord, guitarModel = 'electric' 
   const dots = useMemo(() => {
     const chord = CHORDS[selectedChord]
     if (!chord) return []
-    return (guitarModel === 'acoustic' ? chord.acousticDots : null) ?? chord.dots ?? []
+    if (guitarModel === 'acoustic')   return chord.acousticDots ?? chord.dots ?? []
+    if (guitarModel === 'Working_RH') return chord.rhDots      ?? chord.dots ?? []
+    return chord.dots ?? []
   }, [selectedChord, guitarModel])
 
   return (

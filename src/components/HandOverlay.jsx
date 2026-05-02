@@ -10,7 +10,15 @@ const FINGER_GROUPS = [
   [18, 19, 20], // pinky
 ]
 
-const FINGER_HALF_WIDTH = 14  // px — how wide each finger tube is
+// Derive finger half-width from actual palm size so tubes scale with hand distance
+function getFingerHalfWidth(hand, W, H) {
+  const wrist = hand[0]
+  const mcp   = hand[9]  // middle finger MCP knuckle
+  const dx = (1 - wrist.x) * W - (1 - mcp.x) * W
+  const dy = wrist.y * H - mcp.y * H
+  const palmPx = Math.sqrt(dx * dx + dy * dy)
+  return Math.max(8, Math.min(22, palmPx * 0.17))
+}
 
 // Build a capsule polygon tracing the outline of one finger
 function fingerPolygon(pts, halfWidth) {
@@ -89,6 +97,8 @@ export default function HandOverlay({ videoRef, handResults, visible = true }) {
       results.landmarks.forEach(hand => {
         if (!hand) return
 
+        const halfWidth = getFingerHalfWidth(hand, W, H)
+
         FINGER_GROUPS.forEach(group => {
           // Map normalised landmarks → canvas coords (mirrored to match video CSS)
           const pts = group.map(idx => ({
@@ -96,7 +106,7 @@ export default function HandOverlay({ videoRef, handResults, visible = true }) {
             y:  hand[idx].y      * H,
           }))
 
-          const poly = fingerPolygon(pts, FINGER_HALF_WIDTH)
+          const poly = fingerPolygon(pts, halfWidth)
           if (poly.length < 3) return
 
           ctx.save()

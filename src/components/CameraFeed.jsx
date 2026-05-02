@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-export default function CameraFeed({ onStreamReady }) {
+export default function CameraFeed({ onStreamReady, deviceId = null }) {
   const videoRef = useRef(null)
 
   useEffect(() => {
@@ -8,10 +8,13 @@ export default function CameraFeed({ onStreamReady }) {
 
     async function startCamera() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        const constraints = {
+          video: deviceId
+            ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
           audio: false,
-        })
+        }
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           videoRef.current.onloadedmetadata = () => {
@@ -29,7 +32,7 @@ export default function CameraFeed({ onStreamReady }) {
     return () => {
       if (stream) stream.getTracks().forEach(t => t.stop())
     }
-  }, [onStreamReady])
+  }, [onStreamReady, deviceId])
 
   return (
     <video

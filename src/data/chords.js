@@ -22,6 +22,10 @@ export const CHORDS = {
       { x: -0.05, y: 1.55 },  // A string, fret 2
       { x:  0.0, y: 1.55 },  // D string, fret 2
     ],
+    rhDots: [
+      { x: -0.025, y: 1.85 },  // A string, fret 2
+      { x:  0.008, y: 1.85 },  // D string, fret 2
+    ],
     notes: ['E2', 'B2', 'E3', 'G3', 'B3', 'E4'],
     stringNotes: ['E2', 'B2', 'E3', 'G3', 'B3', 'E4'],
   },
@@ -42,6 +46,12 @@ export const CHORDS = {
       { x: -0.045, y: 1.65 },  // high e string, fret 3
     ],
     acousticDots: [
+      { x:  0.065, y: 1.65 },  // low E string, fret 3
+      { x:  0.020, y: 1.75 },  // A string, fret 2
+      { x: -0.020, y: 1.65 },  // B string, fret 3
+      { x: -0.045, y: 1.65 },  // high e string, fret 3
+    ],
+    rhDots: [
       { x:  0.065, y: 1.65 },  // low E string, fret 3
       { x:  0.020, y: 1.75 },  // A string, fret 2
       { x: -0.020, y: 1.65 },  // B string, fret 3
@@ -69,6 +79,11 @@ export const CHORDS = {
       { x: -0.006, y: 1.80 },  // D string, fret 2
       { x:  0.058, y: 1.60 },  // B string, fret 1
     ],
+    rhDots: [
+      { x: -0.038, y: 1.90 },  // A string, fret 3
+      { x: -0.006, y: 1.80 },  // D string, fret 2
+      { x:  0.058, y: 1.60 },  // B string, fret 1
+    ],
     notes: ['C3', 'E3', 'G3', 'C4', 'E4'],
     stringNotes: [null, 'C3', 'E3', 'G3', 'C4', 'E4'],
   },
@@ -86,6 +101,11 @@ export const CHORDS = {
       { x:  0.00, y: 1.70 },   // high e string, fret 2
     ],
     acousticDots: [
+      { x:  -.030, y: 1.85 },  // G string, fret 2
+      { x:  0.010, y: 1.85 },  // B string, fret 3
+      { x:  0.00, y: 1.70 },   // high e string, fret 2
+    ],
+    rhDots: [
       { x:  -.030, y: 1.85 },  // G string, fret 2
       { x:  0.010, y: 1.85 },  // B string, fret 3
       { x:  0.00, y: 1.70 },   // high e string, fret 2
@@ -113,6 +133,11 @@ export const CHORDS = {
       { x: -0.006, y: 1.85 },  // D string, fret 2
       { x:  -0.001, y: 2.00 }, // G string, fret 1
     ],
+    rhDots: [
+      { x: -0.038, y: 1.85 },  // A string, fret 2
+      { x: -0.006, y: 1.85 },  // D string, fret 2
+      { x:  -0.001, y: 2.00 }, // G string, fret 1
+    ],
     notes: ['E2', 'B2', 'E3', 'Gs3', 'B3', 'E4'],
     stringNotes: ['E2', 'B2', 'E3', 'Gs3', 'B3', 'E4'],
   },
@@ -132,6 +157,11 @@ export const CHORDS = {
       { x:  0.020, y: 1.95 },  // B string, fret 1
     ],
     acousticDots: [
+      { x: -0.006, y: 1.80 },  // D string, fret 2
+      { x:  0.026, y: 1.80 },  // G string, fret 2
+      { x:  0.020, y: 1.95 },  // B string, fret 1
+    ],
+    rhDots: [
       { x: -0.006, y: 1.80 },  // D string, fret 2
       { x:  0.026, y: 1.80 },  // G string, fret 2
       { x:  0.020, y: 1.95 },  // B string, fret 1

@@ -17,12 +17,16 @@ import useChordRecognition from './hooks/useChordRecognition'
 import HandCursor from './components/HandCursor'
 import SettingsPanel from './components/SettingsPanel'
 import AmpSelector from './components/AmpSelector'
+import ChordDiagram from './components/ChordDiagram'
 import { CHORDS } from './data/chords'
 import './index.css'
 
+// DEV SHORTCUT: ?dev=ModelName skips the full flow for quick model testing
+const devModel = new URLSearchParams(window.location.search).get('dev')
+
 export default function App() {
-  const [showApp, setShowApp]           = useState(false)
-  const [mode, setMode]                 = useState(null)   // null | 'rock' | 'learn'
+  const [showApp, setShowApp]           = useState(!!devModel)
+  const [mode, setMode]                 = useState(devModel ? 'rock' : null)
   const [selectedChord, setSelectedChord] = useState('Em')
   const [cameraReady, setCameraReady]   = useState(false)
   const [leftHanded, setLeftHanded]     = useState(false)
@@ -35,9 +39,10 @@ export default function App() {
   const [autoChordLearn, setAutoChordLearn] = useState(false)
   const [autoChordRock, setAutoChordRock]   = useState(true)
   const [currentAmp, setCurrentAmp]         = useState('clean')
-  const [guitarModel, setGuitarModel]       = useState(null)
+  const [guitarModel, setGuitarModel]       = useState(devModel ?? null)
   const [showHowTo, setShowHowTo]           = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [cameraDeviceId, setCameraDeviceId] = useState(null)
 
   const videoRef       = useRef(null)
   const guitarStateRef = useRef({ x: 0, y: 0, scale: 100 })
@@ -121,7 +126,7 @@ export default function App() {
       <>
         {/* Camera runs hidden so useMediaPipe can feed hand tracking to dwell-click */}
         <div style={{ position: 'fixed', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}>
-          <CameraFeed onStreamReady={handleStreamReady} />
+          <CameraFeed onStreamReady={handleStreamReady} deviceId={cameraDeviceId} />
         </div>
         <ModeSelect onSelect={setMode} dwellCursor={dwellCursor} />
       </>
@@ -132,7 +137,7 @@ export default function App() {
     return (
       <>
         <div style={{ position: 'fixed', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}>
-          <CameraFeed onStreamReady={handleStreamReady} />
+          <CameraFeed onStreamReady={handleStreamReady} deviceId={cameraDeviceId} />
         </div>
         <GuitarSelect
           onSelect={handleGuitarModelChange}
@@ -148,7 +153,7 @@ export default function App() {
     return (
       <>
         <div style={{ position: 'fixed', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}>
-          <CameraFeed onStreamReady={handleStreamReady} />
+          <CameraFeed onStreamReady={handleStreamReady} deviceId={cameraDeviceId} />
         </div>
         <HowToUse mode={mode} onDone={() => setShowHowTo(false)} dwellCursor={dwellCursor} />
       </>
@@ -162,7 +167,7 @@ export default function App() {
     <div className={`relative w-full h-full bg-black overflow-hidden font-sans${darkMode ? ' dark-mode' : ''}`}>
 
       {/* Layer 1 — camera */}
-      <CameraFeed onStreamReady={handleStreamReady} />
+      <CameraFeed onStreamReady={handleStreamReady} deviceId={cameraDeviceId} />
 
       {/* Layer 2a — skeleton canvas (behind guitar) */}
       <TrackingCanvas poseResults={poseResults} handResults={handResults} visible={showTracking} />
@@ -267,6 +272,10 @@ export default function App() {
             </ul>
           </div>
         )}
+
+        {/* Chord diagram */}
+        <ChordDiagram selectedChord={selectedChord} />
+
       </div>
 
       {/* Settings panel */}
@@ -286,6 +295,8 @@ export default function App() {
         onAmpChange={handleAmpChange}
         guitarModel={guitarModel}
         onGuitarModelChange={setGuitarModel}
+        cameraDeviceId={cameraDeviceId}
+        onCameraDeviceChange={setCameraDeviceId}
       />
 
       {/* Dark mode toggle — bottom left */}

@@ -24,6 +24,14 @@ const GUITARS = [
     modelPath: '/models/acoustic_guitar.glb',
     rotation: [0, 3, 0],
   },
+  {
+    key: 'Working_RH',
+    label: 'Unmarked Fender',
+    subtitle: 'New model — testing',
+    emoji: '🎸',
+    modelPath: '/models/Working_RH.glb',
+    rotation: [0, 0, 0],
+  },
 ]
 
 GUITARS.forEach(g => useGLTF.preload(g.modelPath))

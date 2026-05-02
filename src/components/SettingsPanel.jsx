@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import AmpSelector from './AmpSelector'
 
 export default function SettingsPanel({
@@ -16,7 +17,17 @@ export default function SettingsPanel({
   onAmpChange,
   guitarModel,
   onGuitarModelChange,
+  cameraDeviceId,
+  onCameraDeviceChange,
 }) {
+  const [cameras, setCameras] = useState([])
+
+  useEffect(() => {
+    if (!open) return
+    navigator.mediaDevices.enumerateDevices().then(devices => {
+      setCameras(devices.filter(d => d.kind === 'videoinput'))
+    })
+  }, [open])
   return (
     <>
       {/* Backdrop — click to close */}
@@ -105,6 +116,24 @@ export default function SettingsPanel({
             </button>
           </div>
         </div>
+
+        {/* Camera selector */}
+        {cameras.length > 1 && (
+          <div className="glass-panel rounded-2xl">
+            <p className="text-slate-400 text-xs uppercase tracking-widest mb-2">Camera</p>
+            <div className="flex flex-col gap-2">
+              {cameras.map(cam => (
+                <button
+                  key={cam.deviceId}
+                  onClick={() => onCameraDeviceChange?.(cam.deviceId)}
+                  className={`glass-btn w-full text-sm text-left ${cameraDeviceId === cam.deviceId ? 'glass-btn-active' : ''}`}
+                >
+                  {cam.label || `Camera ${cameras.indexOf(cam) + 1}`}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Debug */}
         <div className="glass-panel rounded-2xl">
