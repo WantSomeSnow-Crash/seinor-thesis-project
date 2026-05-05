@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import CameraFeed from './components/CameraFeed'
 import ChordSelector from './components/ChordSelector'
 import StatusBar from './components/StatusBar'
@@ -39,11 +39,39 @@ export default function App() {
   const [autoChordLearn, setAutoChordLearn] = useState(false)
   const [autoChordRock, setAutoChordRock]   = useState(true)
   const [currentAmp, setCurrentAmp]         = useState('clean')
-  const [guitarModel, setGuitarModel]       = useState(devModel ?? null)
+  const [guitarModel, setGuitarModel]       = useState(null)
   const [showHowTo, setShowHowTo]           = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cameraDeviceId, setCameraDeviceId] = useState(null)
 
+  useEffect(() => {
+    async function pickBestCamera() {
+      try {
+        // Need permission first so device labels are populated
+        const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        tmp.getTracks().forEach(t => t.stop())
+
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const cameras = devices.filter(d => d.kind === 'videoinput')
+        if (cameras.length <= 1) return
+
+        const external = cameras.find(c => {
+          const l = c.label.toLowerCase()
+          return !l.includes('facetime') && !l.includes('built-in') && !l.includes('isight')
+        })
+        if (external) setCameraDeviceId(external.deviceId)
+      } catch { /* permission denied or no cameras */ }
+    }
+
+    pickBestCamera()
+
+    function onDeviceChange() { pickBestCamera() }
+    navigator.mediaDevices.addEventListener('devicechange', onDeviceChange)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange)
+  }, [])
+
+  const [dotOffsetX, setDotOffsetX] = useState(0)
+  const [dotOffsetY, setDotOffsetY] = useState(0)
   const videoRef       = useRef(null)
   const guitarStateRef = useRef({ x: 0, y: 0, scale: 100 })
   const sizeRef        = useRef({ width: window.innerWidth, height: window.innerHeight })
@@ -186,6 +214,8 @@ export default function App() {
         showStrumZone={showStrumZone}
         showDots={showDots}
         guitarModel={guitarModel}
+        dotOffsetX={dotOffsetX}
+        dotOffsetY={dotOffsetY}
       />
 
       {/* Layer 4 — vignette */}
