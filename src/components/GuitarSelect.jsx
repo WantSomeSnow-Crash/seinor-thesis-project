@@ -8,14 +8,14 @@ import HandCursor from './HandCursor'
 const TARGET_SIZE = 4.5
 
 const GUITARS = [
-  {
-    key: 'electric',
-    label: 'Electric Guitar',
-    subtitle: 'Classic electric tone',
-    emoji: '🎸',
-    modelPath: '/models/electric_guitar.glb',
-    rotation: [0, 0, 0],
-  },
+  // {
+  //   key: 'electric',
+  //   label: 'Electric Guitar',
+  //   subtitle: 'Classic electric tone',
+  //   emoji: '🎸',
+  //   modelPath: '/models/electric_guitar.glb',
+  //   rotation: [0, 0, 0],
+  // },
   {
     key: 'acoustic',
     label: 'Acoustic Guitar',
@@ -26,8 +26,8 @@ const GUITARS = [
   },
   {
     key: 'Working_RH',
-    label: 'Unmarked Fender',
-    subtitle: 'New model — testing',
+    label: 'Fender Stratocaster',
+    subtitle: 'Bright and versatile tone',
     emoji: '🎸',
     modelPath: '/models/Working_RH.glb',
     rotation: [0, 0, 0],
