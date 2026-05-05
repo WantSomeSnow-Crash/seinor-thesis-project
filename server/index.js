@@ -1,6 +1,6 @@
-const express = require('express')
-const cors    = require('cors')
-const { recognizeChord } = require('./chordRecognition')
+import express from 'express'
+import cors from 'cors'
+import { recognizeChord } from './chordRecognition.js'
 
 const app  = express()
 const PORT = process.env.PORT || 3001

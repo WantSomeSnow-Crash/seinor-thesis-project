@@ -46,11 +46,11 @@ const CHORD_PROFILES = {
   Am: { curls: [0.38, 0.55, 0.52, 0.10], spread: 0.40 },
 }
 
-const CURL_WEIGHT        = 0.65
-const SPREAD_WEIGHT      = 0.35
+const CURL_WEIGHT         = 0.65
+const SPREAD_WEIGHT       = 0.35
 const CONFIDENCE_THRESHOLD = 0.55
 
-function recognizeChord(hand) {
+export function recognizeChord(hand) {
   const curls  = [0, 1, 2, 3].map(i => getFingerCurl(hand, i))
   const spread = getCurledSpread(hand, curls)
 
@@ -68,5 +68,3 @@ function recognizeChord(hand) {
   if (confidence < CONFIDENCE_THRESHOLD) return { chord: null, confidence }
   return { chord: bestChord, confidence }
 }
-
-module.exports = { recognizeChord }
