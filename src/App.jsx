@@ -18,7 +18,9 @@ import HandCursor from './components/HandCursor'
 import SettingsPanel from './components/SettingsPanel'
 import AmpSelector from './components/AmpSelector'
 import ChordDiagram from './components/ChordDiagram'
+import SongPlayer from './components/SongPlayer'
 import { CHORDS } from './data/chords'
+import { SONGS } from './data/songs'
 import './index.css'
 
 // DEV SHORTCUT: ?dev=ModelName skips the full flow for quick model testing
@@ -42,6 +44,7 @@ export default function App() {
   const [guitarModel, setGuitarModel]       = useState(null)
   const [showHowTo, setShowHowTo]           = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [activeSong, setActiveSong]     = useState(null)
   const [cameraDeviceId, setCameraDeviceId] = useState(null)
 
   useEffect(() => {
@@ -301,6 +304,24 @@ export default function App() {
               <li><span className="text-purple-400 font-bold">●</span> Fretting hand</li>
             </ul>
           </div>
+        )}
+
+        {/* Song mode — rock only */}
+        {mode === 'rock' && !activeSong && (
+          <button
+            className="glass-btn text-sm text-emerald-400 font-semibold"
+            style={{ padding: '0.5rem 1rem' }}
+            onClick={() => setActiveSong(SONGS[0])}
+          >
+            🎵 Play a Song
+          </button>
+        )}
+        {mode === 'rock' && activeSong && (
+          <SongPlayer
+            song={activeSong}
+            onChordChange={handleChordChange}
+            onStop={() => setActiveSong(null)}
+          />
         )}
 
         {/* Chord diagram */}
