@@ -19,6 +19,9 @@ export default function SettingsPanel({
   onGuitarModelChange,
   cameraDeviceId,
   onCameraDeviceChange,
+  dotOffsetX = 0,
+  dotOffsetY = 0,
+  onDotOffsetChange,
 }) {
   const [cameras, setCameras] = useState([])
 
@@ -116,6 +119,41 @@ export default function SettingsPanel({
             </button>
           </div>
         </div>
+
+        {/* Dot position — learn mode only */}
+        {mode === 'learn' && (
+          <div className="glass-panel rounded-2xl">
+            <p className="text-slate-400 text-xs uppercase tracking-widest mb-3">Dot Position</p>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-300 text-xs">Left / Right</span>
+                  <span className="text-slate-400 text-xs">{dotOffsetX > 0 ? '+' : ''}{dotOffsetX}px</span>
+                </div>
+                <input type="range" min={-200} max={200} step={1} value={dotOffsetX}
+                  onChange={e => onDotOffsetChange?.(Number(e.target.value), dotOffsetY)}
+                  className="w-full accent-emerald-400"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-300 text-xs">Up / Down</span>
+                  <span className="text-slate-400 text-xs">{dotOffsetY > 0 ? '+' : ''}{dotOffsetY}px</span>
+                </div>
+                <input type="range" min={-200} max={200} step={1} value={dotOffsetY}
+                  onChange={e => onDotOffsetChange?.(dotOffsetX, Number(e.target.value))}
+                  className="w-full accent-emerald-400"
+                />
+              </div>
+              <button
+                onClick={() => onDotOffsetChange?.(0, 0)}
+                className="glass-btn text-xs text-slate-400 w-full"
+              >
+                Reset to default
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Camera selector */}
         {cameras.length > 1 && (

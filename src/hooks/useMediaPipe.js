@@ -5,11 +5,25 @@ import {
   FilesetResolver,
 } from '@mediapipe/tasks-vision'
 
+// Only accept a pose if its torso center is within the middle of the frame.
+// This prevents locking onto people walking past in the background.
+const CENTER_ZONE_MIN = 0.20
+const CENTER_ZONE_MAX = 0.80
+
+function isCentered(landmarks) {
+  if (!landmarks?.length) return false
+  // Torso = avg x of left/right shoulders (11,12) and left/right hips (23,24)
+  const pts = [11, 12, 23, 24].map(i => landmarks[i]?.x ?? 0.5)
+  const cx = pts.reduce((s, v) => s + v, 0) / pts.length
+  return cx >= CENTER_ZONE_MIN && cx <= CENTER_ZONE_MAX
+}
+
 export default function useMediaPipe(videoRef) {
   const poseLandmarkerRef = useRef(null)
   const handLandmarkerRef = useRef(null)
   const rafRef = useRef(null)
   const lastVideoTimeRef = useRef(-1)
+  const lastPoseRef = useRef(null)
 
   const [poseResults, setPoseResults] = useState(null)
   const [handResults, setHandResults] = useState(null)
@@ -77,7 +91,13 @@ export default function useMediaPipe(videoRef) {
       const poseRes = poseLandmarkerRef.current.detectForVideo(video, now)
       const handRes = handLandmarkerRef.current.detectForVideo(video, now)
 
-      setPoseResults(poseRes)
+      // Reject poses that are outside the center zone (background passersby)
+      const poseToUse = isCentered(poseRes?.landmarks?.[0])
+        ? poseRes
+        : lastPoseRef.current
+      lastPoseRef.current = poseToUse
+
+      setPoseResults(poseToUse)
       setHandResults(handRes)
 
       rafRef.current = requestAnimationFrame(detect)

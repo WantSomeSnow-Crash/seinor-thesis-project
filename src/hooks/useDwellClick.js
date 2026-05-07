@@ -22,18 +22,32 @@ export default function useDwellClick({ handResults, enabled = true }) {
       return
     }
 
-    // Use whichever hand is visible — prefer index finger tip (landmark 8)
-    const hand = handResults.landmarks[0]
-    const tip  = hand?.[8] ?? hand?.[0]
+    // When multiple hands are visible, stick to the one closest to the last cursor
+    // position so the selection finger doesn't jump between hands
+    const prev = startRef.current
+    const hand = handResults.landmarks.length === 1
+      ? handResults.landmarks[0]
+      : handResults.landmarks.reduce((best, h) => {
+          if (!prev) return best
+          const t = h?.[8]
+          const b = best?.[8]
+          if (!t) return best
+          if (!b) return h
+          const td = Math.hypot((1 - t.x) * window.innerWidth  - prev.x,
+                                 t.y       * window.innerHeight - prev.y)
+          const bd = Math.hypot((1 - b.x) * window.innerWidth  - prev.x,
+                                 b.y       * window.innerHeight - prev.y)
+          return td < bd ? h : best
+        }, handResults.landmarks[0])
+
+    const tip = hand?.[8] ?? hand?.[0]
     if (!tip) return
 
     // Mirror x to match the CSS-mirrored video
     const sx = (1 - tip.x) * window.innerWidth
     const sy = tip.y * window.innerHeight
 
-    setCursor(prev => ({ x: sx, y: sy, progress: prev?.progress ?? 0 }))
-
-    const prev = startRef.current
+    setCursor(p => ({ x: sx, y: sy, progress: p?.progress ?? 0 }))
 
     if (!prev) {
       // First detection — start tracking

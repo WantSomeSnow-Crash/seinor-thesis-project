@@ -20,7 +20,7 @@ const GUITAR_TILT      = 1
 const ANCHOR_HIP_BLEND = 0.80
 const ANCHOR_UP_RATIO  = -0.10
 const ANCHOR_X_OFFSET  = .60
-const GUITAR_VS_TORSO  = 3.2
+const GUITAR_VS_TORSO  = 3.6
 const MODEL_SPAN       = 2.85
 
 // Reusable vectors
@@ -81,6 +81,8 @@ export default function GuitarPlaceholder({
   showStrumZone  = false,
   showDots       = true,
   guitarModel    = 'electric',
+  dotOffsetX     = 0,
+  dotOffsetY     = 0,
 }) {
   const groupRef    = useRef()
   const dotsGroupRef = useRef()
@@ -215,8 +217,8 @@ export default function GuitarPlaceholder({
     if (dotsGroupRef.current) {
       const rot  = group.rotation.z
       const s    = group.scale.x
-      const dotX = GUITAR_DOT_OFFSET[guitarModel]?.x ?? DOT_SCREEN_OFFSET_X
-      const dotY = GUITAR_DOT_OFFSET[guitarModel]?.y ?? DOT_SCREEN_OFFSET_Y
+      const dotX = (GUITAR_DOT_OFFSET[guitarModel]?.x ?? DOT_SCREEN_OFFSET_X) + dotOffsetX
+      const dotY = (GUITAR_DOT_OFFSET[guitarModel]?.y ?? DOT_SCREEN_OFFSET_Y) + dotOffsetY
       dotsGroupRef.current.position.x = ( dotX * Math.cos(rot) + dotY * Math.sin(rot)) / s
       dotsGroupRef.current.position.y = (-dotX * Math.sin(rot) + dotY * Math.cos(rot)) / s
     }

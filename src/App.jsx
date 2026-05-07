@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import CameraFeed from './components/CameraFeed'
 import ChordSelector from './components/ChordSelector'
-import StatusBar from './components/StatusBar'
 import TrackingCanvas from './components/TrackingCanvas'
 import HandOverlay from './components/HandOverlay'
 import GuitarScene from './components/GuitarScene'
@@ -30,18 +29,17 @@ export default function App() {
   const [showApp, setShowApp]           = useState(!!devModel)
   const [mode, setMode]                 = useState(devModel ? 'rock' : null)
   const [selectedChord, setSelectedChord] = useState('Em')
-  const [cameraReady, setCameraReady]   = useState(false)
   const [leftHanded, setLeftHanded]     = useState(false)
   const [strumPulse, setStrumPulse]     = useState(0)
   const [strumFlash, setStrumFlash]     = useState(false)
   const [strumDirection, setStrumDirection] = useState(null)  // 'up' | 'down' | null
   const [showStrumZone, setShowStrumZone] = useState(false)
-  const [showTracking, setShowTracking] = useState(true)
-  const [darkMode, setDarkMode]         = useState(false)
+  const [showTracking, setShowTracking] = useState(false)
+  const [darkMode, setDarkMode]         = useState(true)
   const [autoChordLearn, setAutoChordLearn] = useState(false)
   const [autoChordRock, setAutoChordRock]   = useState(true)
   const [currentAmp, setCurrentAmp]         = useState('clean')
-  const [guitarModel, setGuitarModel]       = useState(null)
+  const [guitarModel, setGuitarModel]       = useState(devModel || null)
   const [showHowTo, setShowHowTo]           = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [activeSong, setActiveSong]     = useState(null)
@@ -84,10 +82,9 @@ export default function App() {
 
   const handleStreamReady = useCallback((videoEl) => {
     videoRef.current = videoEl
-    setCameraReady(true)
   }, [])
 
-  const { poseResults, handResults, trackingReady } = useMediaPipe(videoRef)
+  const { poseResults, handResults } = useMediaPipe(videoRef)
   const { playString, playStrum, initAudio, setAmp, setGuitarModel: setAudioGuitarModel } = useAudio()
 
   const handleAmpChange = useCallback((ampKey) => {
@@ -203,8 +200,8 @@ export default function App() {
       {/* Layer 2a — skeleton canvas (behind guitar) */}
       <TrackingCanvas poseResults={poseResults} handResults={handResults} visible={showTracking} />
 
-      {/* Layer 2b — real camera pixels for each hand, rendered over the guitar */}
-      <HandOverlay videoRef={videoRef} handResults={handResults} visible={showTracking} />
+      {/* Layer 2b — real camera pixels for each hand, always visible */}
+      <HandOverlay videoRef={videoRef} handResults={handResults} visible={true} />
 
       {/* Layer 3 — 3D guitar */}
       <GuitarScene
@@ -360,8 +357,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* Status bar */}
-      <StatusBar cameraReady={cameraReady} trackingReady={trackingReady} step={4} />
 
       {/* Hand cursor with dwell-click ring */}
       <HandCursor cursor={dwellCursor} />

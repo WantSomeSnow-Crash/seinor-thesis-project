@@ -11,5 +11,8 @@ export default defineConfig({
     watch: {
       ignored: ['**/node_modules/**', '**/public/**', '**/.git/**'],
     },
+    proxy: {
+      '/api': 'http://localhost:3001',
+    },
   },
 })

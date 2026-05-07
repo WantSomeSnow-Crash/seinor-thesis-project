@@ -9,8 +9,8 @@ export const FIRST_STRING_X   = (0 - 2.5) * STRING_SPACING  // = -0.08
 // Shift the strum zone in SCREEN PIXELS (these are easy to understand):
 //   STRUM_OFFSET_X  positive = right,  negative = left
 //   STRUM_OFFSET_Y  positive = up,     negative = down
-export const STRUM_OFFSET_X   = -330
-export const STRUM_OFFSET_Y   = 260
+export const STRUM_OFFSET_X   = -45
+export const STRUM_OFFSET_Y   = 40
 
 // Per-model overrides — set to null to fall back to the defaults above
 export const MODEL_STRUM_OFFSET = {
