@@ -17,7 +17,8 @@ function getFingerHalfWidth(hand, W, H) {
   const dx = (1 - wrist.x) * W - (1 - mcp.x) * W
   const dy = wrist.y * H - mcp.y * H
   const palmPx = Math.sqrt(dx * dx + dy * dy)
-  return Math.max(8, Math.min(22, palmPx * 0.17))
+  // Scale directly with palm size so fingers adapt to any distance
+  return Math.max(4, palmPx * 0.14)
 }
 
 // Build a capsule polygon tracing the outline of one finger

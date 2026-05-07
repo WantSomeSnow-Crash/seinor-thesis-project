@@ -15,7 +15,7 @@ export const STRUM_OFFSET_Y   = 40
 // Per-model overrides — set to null to fall back to the defaults above
 export const MODEL_STRUM_OFFSET = {
   electric: { x: STRUM_OFFSET_X, y: STRUM_OFFSET_Y },
-  acoustic:  { x: STRUM_OFFSET_X, y: STRUM_OFFSET_Y - 100 },
+  acoustic:  { x: STRUM_OFFSET_X, y: STRUM_OFFSET_Y - 30 },
 }
 
 // Y range of the strum zone in guitar local space (body / soundhole area)
