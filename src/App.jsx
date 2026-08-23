@@ -25,9 +25,14 @@ import './index.css'
 // DEV SHORTCUT: ?dev=ModelName skips the full flow for quick model testing
 const devModel = new URLSearchParams(window.location.search).get('dev')
 
+// Mode select is still in progress (Learn mode isn't ready) — default straight
+// to Rock mode so visitors never see the choice. Re-enable by dropping the
+// 'rock' default back to null once Learn mode is fixed up.
+const showModeSelect = import.meta.env.DEV
+
 export default function App() {
   const [showApp, setShowApp]           = useState(!!devModel)
-  const [mode, setMode]                 = useState(devModel ? 'rock' : null)
+  const [mode, setMode]                 = useState(showModeSelect ? (devModel ? 'rock' : null) : 'rock')
   const [selectedChord, setSelectedChord] = useState('Em')
   const [leftHanded, setLeftHanded]     = useState(false)
   const [strumPulse, setStrumPulse]     = useState(0)
@@ -169,7 +174,7 @@ export default function App() {
         </div>
         <GuitarSelect
           onSelect={handleGuitarModelChange}
-          onBack={() => setMode(null)}
+          onBack={showModeSelect ? () => setMode(null) : undefined}
           handResults={handResults}
           dwellCursor={dwellCursor}
         />
@@ -248,13 +253,15 @@ export default function App() {
             {guitarModel === 'acoustic' ? '🪕 Air Acoustic' : '🎸 Air Guitar'}
           </span>
         </button>
-        <button
-          onClick={() => setMode(null)}
-          className="glass-btn text-xs text-slate-400"
-          style={{ padding: '0.35rem 0.85rem' }}
-        >
-          {mode === 'rock' ? '🤘 Rock mode' : '🎓 Learn mode'} — switch
-        </button>
+        {showModeSelect && (
+          <button
+            onClick={() => setMode(null)}
+            className="glass-btn text-xs text-slate-400"
+            style={{ padding: '0.35rem 0.85rem' }}
+          >
+            {mode === 'rock' ? '🤘 Rock mode' : '🎓 Learn mode'} — switch
+          </button>
+        )}
       </div>
 
       {/* Chord selector */}

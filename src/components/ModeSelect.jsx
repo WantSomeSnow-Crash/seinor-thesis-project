@@ -1,5 +1,8 @@
 import HandCursor from './HandCursor'
 
+// Learn mode is still in progress — only expose it in local dev, not the live site
+const showLearnMode = import.meta.env.DEV
+
 export default function ModeSelect({ onSelect, dwellCursor }) {
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-black">
@@ -37,18 +40,20 @@ export default function ModeSelect({ onSelect, dwellCursor }) {
             </span>
           </button>
 
-          {/* Learn mode */}
-          <button
-            onClick={() => onSelect('learn')}
-            className="glass-btn flex-1 flex flex-col items-center gap-4 rounded-3xl"
-            style={{ padding: '2.5rem 1.5rem' }}
-          >
-            <span className="text-6xl">🎓</span>
-            <span className="text-white font-bold text-2xl">I Wanna Learn</span>
-            <span className="text-slate-300 text-sm font-normal leading-relaxed">
-              See finger placement dots on the fretboard and pluck individual strings. Perfect for learning chord shapes.
-            </span>
-          </button>
+          {/* Learn mode — hidden on the live site while still in development */}
+          {showLearnMode && (
+            <button
+              onClick={() => onSelect('learn')}
+              className="glass-btn flex-1 flex flex-col items-center gap-4 rounded-3xl"
+              style={{ padding: '2.5rem 1.5rem' }}
+            >
+              <span className="text-6xl">🎓</span>
+              <span className="text-white font-bold text-2xl">I Wanna Learn</span>
+              <span className="text-slate-300 text-sm font-normal leading-relaxed">
+                See finger placement dots on the fretboard and pluck individual strings. Perfect for learning chord shapes.
+              </span>
+            </button>
+          )}
 
         </div>
 

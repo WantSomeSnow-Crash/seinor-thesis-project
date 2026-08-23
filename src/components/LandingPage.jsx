@@ -9,14 +9,20 @@ export default function LandingPage({ onEnter }) {
 
   // Ask for camera permission as soon as the page loads
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-        }
-        setCamStatus('granted')
-      })
-      .catch(() => setCamStatus('denied'))
+    try {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream
+          }
+          setCamStatus('granted')
+        })
+        .catch(() => setCamStatus('denied'))
+    } catch {
+      // navigator.mediaDevices can be undefined in insecure contexts or
+      // restricted embeds, which throws synchronously instead of rejecting
+      setCamStatus('denied')
+    }
   }, [])
 
   // Pass videoRef directly — useMediaPipe reads .current each frame so it
